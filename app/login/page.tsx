@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { loginUser, loginUserDemo } from "@/lib/api"
+import { loginUser } from "@/lib/api"
 import { setAuthToken } from "@/lib/auth"
 
 export default function LoginPage() {
@@ -19,19 +19,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-
-  const handleDemoLogin = async () => {
-    setIsLoading(true)
-    try {
-      const response = await loginUserDemo()
-      setAuthToken(response.access_token)
-      router.push("/chat")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Demo login failed")
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
