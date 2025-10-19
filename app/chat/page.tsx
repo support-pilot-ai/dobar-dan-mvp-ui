@@ -32,17 +32,10 @@ export default function ChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    console.log("🔍 Checking auth...")
-    console.log("Token:", getAuthToken())
-    console.log("isAuthenticated:", isAuthenticated())
-    
     if (!isAuthenticated()) {
-      console.log("❌ Not authenticated - redirecting...")
       router.push("/login")
       return
     }
-    
-    console.log("✅ Authenticated - staying on page")
   }, [router])
 
   useEffect(() => {
@@ -76,22 +69,23 @@ export default function ChatPage() {
       const response = await sendMessage(token, userMessage.content)
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: response.id,
         role: "assistant",
-        content: response.response,
-        timestamp: new Date(),
+        content: response.content,
+        timestamp: new Date(response.created_at),
       }
 
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
-      console.log("[v0] Using demo response due to API error")
-      const assistantMessage: Message = {
+      console.error("Failed to send message:", error)
+      // Show error to user instead of demo response
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Demo response to: "${userMessage.content}". This is a simulated AI response. Connect your backend to get real responses.`,
+        content: "Greška pri slanju poruke. Molimo pokušajte ponovo.",
         timestamp: new Date(),
       }
-      setMessages((prev) => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
       textareaRef.current?.focus()

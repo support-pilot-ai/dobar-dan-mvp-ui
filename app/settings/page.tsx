@@ -39,9 +39,9 @@ export default function SettingsPage() {
           setEmail(profile.email || "")
         }
       } catch (error) {
-        console.log("[v0] Using demo profile data due to API error")
-        setName("Demo Korisnik")
-        setEmail("demo@example.com")
+        console.error("Failed to load profile:", error)
+        setMessage("Greška pri učitavanju profila")
+        setMessageType("error")
       }
     }
 

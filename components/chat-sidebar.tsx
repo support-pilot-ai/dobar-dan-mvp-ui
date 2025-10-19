@@ -14,9 +14,15 @@ import { getDocuments } from "@/lib/api"
 
 interface Document {
   id: string
-  title: string
-  type: string
-  uploadedAt: Date
+  user_id: string
+  filename: string
+  file_type: string
+  file_size: number
+  file_url: string
+  status: string
+  chunk_count: number
+  error_message: string | null
+  created_at: string
 }
 
 interface ChatSidebarProps {
@@ -37,26 +43,12 @@ export function ChatSidebar({ isOpen, onClose, onNewChat }: ChatSidebarProps) {
       try {
         const token = getAuthToken()
         if (token) {
-          try {
-            const docData = await getDocuments(token)
-            setDocuments(
-              docData.map((doc: any) => ({
-                id: doc.id,
-                title: doc.title,
-                type: doc.type,
-                uploadedAt: new Date(doc.uploaded_at),
-              })),
-            )
-          } catch (error) {
-            console.log("[v0] Using demo documents due to API error")
-            setDocuments([
-              { id: "1", title: "Demo Dokument.pdf", type: "pdf", uploadedAt: new Date() },
-              { id: "2", title: "Primjer Fajl.docx", type: "docx", uploadedAt: new Date() },
-            ])
-          }
+          const docData = await getDocuments(token)
+          setDocuments(docData)
         }
       } catch (error) {
-        console.error("Failed to load data:", error)
+        console.error("Failed to load documents:", error)
+        setDocuments([])
       } finally {
         setIsLoadingDocs(false)
       }
@@ -134,8 +126,8 @@ export function ChatSidebar({ isOpen, onClose, onNewChat }: ChatSidebarProps) {
                     <Button key={doc.id} variant="ghost" className="w-full justify-start gap-2 text-left">
                       <FileText className="h-4 w-4 shrink-0" />
                       <div className="flex-1 truncate">
-                        <div className="truncate font-medium">{doc.title}</div>
-                        <div className="text-xs text-muted-foreground">{doc.type}</div>
+                        <div className="truncate font-medium">{doc.filename}</div>
+                        <div className="text-xs text-muted-foreground">{doc.file_type}</div>
                       </div>
                     </Button>
                   ))

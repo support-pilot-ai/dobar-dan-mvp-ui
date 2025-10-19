@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { registerUser, registerUserDemo } from "@/lib/api"
+import { registerUser } from "@/lib/api"
 import { setAuthToken } from "@/lib/auth"
 
 export default function RegisterPage() {
@@ -20,19 +20,6 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-
-  const handleDemoRegister = async () => {
-    setIsLoading(true)
-    try {
-      const response = await registerUserDemo()
-      setAuthToken(response.access_token)
-      router.push("/chat")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Demo registration failed")
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

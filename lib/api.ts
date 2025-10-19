@@ -1,20 +1,5 @@
 // API Base URL - update this to your backend URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-const AUTH_API = "api/auth"
-
-const DEMO_MODE = !process.env.NEXT_PUBLIC_API_URL
-
-// Demo data
-const DEMO_USER = {
-  id: "demo-user-123",
-  email: "demo@example.com",
-  name: "Demo User",
-  avatar_url: null,
-  bio: null,
-  created_at: new Date().toISOString(),
-}
-
-const DEMO_TOKEN = "demo-jwt-token-12345"
 
 export interface UserRegister {
   email: string
@@ -47,6 +32,16 @@ export interface ChatMessage {
   timestamp: string
 }
 
+export interface ChatMessageResponse {
+  id: string
+  user_id: string
+  type: "assistant"
+  content: string
+  sources: string[] | null
+  response_time: number
+  created_at: string
+}
+
 export interface ChatSession {
   id: string
   title: string
@@ -55,9 +50,15 @@ export interface ChatSession {
 
 export interface Document {
   id: string
-  title: string
-  type: string
-  uploaded_at: string
+  user_id: string
+  filename: string
+  file_type: string
+  file_size: number
+  file_url: string
+  status: string
+  chunk_count: number
+  error_message: string | null
+  created_at: string
 }
 
 export interface UserProfile {
@@ -71,17 +72,7 @@ export interface UserProfile {
 
 // Authentication APIs
 export async function registerUser(data: UserRegister): Promise<AuthResponse> {
-  if (DEMO_MODE) {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return {
-      access_token: DEMO_TOKEN,
-      token_type: "bearer",
-      user: { ...DEMO_USER, name: data.name, email: data.email },
-    }
-  }
-
-  const response = await fetch(`${API_BASE_URL}${AUTH_API}/register`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,28 +93,18 @@ export async function registerUser(data: UserRegister): Promise<AuthResponse> {
     access_token: result.access_token,
     token_type: result.token_type || "bearer",
     user: {
-      id: "",
+      id: "user-" + Date.now(),
       email: data.email,
       name: data.name,
       avatar_url: null,
       bio: null,
-      created_at: ""
+      created_at: new Date().toISOString(),
     },
   }
 }
 
 export async function loginUser(data: UserLogin): Promise<AuthResponse> {
-  if (DEMO_MODE) {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return {
-      access_token: DEMO_TOKEN,
-      token_type: "bearer",
-      user: DEMO_USER,
-    }
-  }
-
-  const response = await fetch(`${API_BASE_URL}${AUTH_API}/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -144,54 +125,25 @@ export async function loginUser(data: UserLogin): Promise<AuthResponse> {
     access_token: result.access_token,
     token_type: result.token_type || "bearer",
     user: {
-      id: result.user.id,
-      email: result.user.email,
-      name: result.user.name, // Default name since backend doesn't return user info,
-      avatar_url: result.user.avatar_url,
-      bio: result.user.bio,
-      created_at: result.user.created_at
+      id: "user-" + Date.now(),
+      email: data.email,
+      name: "User",
+      avatar_url: null,
+      bio: null,
+      created_at: new Date().toISOString(),
     },
   }
 }
 
-export async function loginUserDemo(): Promise<AuthResponse> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  return {
-    access_token: DEMO_TOKEN,
-    token_type: "bearer",
-    user: DEMO_USER,
-  }
-}
-
-export async function registerUserDemo(): Promise<AuthResponse> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  return {
-    access_token: DEMO_TOKEN,
-    token_type: "bearer",
-    user: DEMO_USER,
-  }
-}
-
 // Chat APIs
-export async function sendMessage(token: string, message: string): Promise<{ response: string }> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    return {
-      response: `Demo response to: "${message}". This is a simulated AI response. Connect your backend to get real responses.`,
-    }
-  }
-
-  const response = await fetch(`${API_BASE_URL}/chat/message`, {
+export async function sendMessage(token: string, message: string): Promise<ChatMessageResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ content: message }),
   })
 
   if (!response.ok) {
@@ -202,48 +154,7 @@ export async function sendMessage(token: string, message: string): Promise<{ res
   return response.json()
 }
 
-export async function getChatHistory(token: string): Promise<ChatMessage[]> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return [
-      {
-        id: "1",
-        role: "user",
-        content: "Hello! How are you?",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: "2",
-        role: "assistant",
-        content: "Hello! I'm doing well, thank you. This is demo mode. How can I help you today?",
-        timestamp: new Date(Date.now() - 3500000).toISOString(),
-      },
-    ]
-  }
-
-  const response = await fetch(`${API_BASE_URL}/chat/history`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to load chat history")
-  }
-
-  return response.json()
-}
-
 export async function getChatSessions(token: string): Promise<ChatSession[]> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return [
-      { id: "1", title: "Demo Chat 1", timestamp: new Date(Date.now() - 86400000).toISOString() },
-      { id: "2", title: "Demo Chat 2", timestamp: new Date(Date.now() - 172800000).toISOString() },
-    ]
-  }
-
   const response = await fetch(`${API_BASE_URL}/chat/sessions`, {
     method: "GET",
     headers: {
@@ -260,15 +171,7 @@ export async function getChatSessions(token: string): Promise<ChatSession[]> {
 
 // Document APIs
 export async function getDocuments(token: string): Promise<Document[]> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return [
-      { id: "1", title: "Demo Document.pdf", type: "pdf", uploaded_at: new Date().toISOString() },
-      { id: "2", title: "Sample File.docx", type: "docx", uploaded_at: new Date().toISOString() },
-    ]
-  }
-
-  const response = await fetch(`${API_BASE_URL}/documents`, {
+  const response = await fetch(`${API_BASE_URL}/api/documents`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -286,7 +189,7 @@ export async function uploadDocument(token: string, file: File): Promise<Documen
   const formData = new FormData()
   formData.append("file", file)
 
-  const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+  const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -304,85 +207,42 @@ export async function uploadDocument(token: string, file: File): Promise<Documen
 
 // User Profile APIs
 export async function getUserProfile(token: string): Promise<UserProfile> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return DEMO_USER
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to load user profile")
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${AUTH_API}/me`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        accept: "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error("Failed to load user profile")
-    }
-
-    return response.json()
-  } catch (error) {
-    // Fallback to demo mode if API is not available
-    console.log("[v0] API not available, using demo profile data")
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return DEMO_USER
-  }
+  return response.json()
 }
 
 export async function updateUserProfile(token: string, data: { name: string }): Promise<UserProfile> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return {
-      id: "demo-user-123",
-      email: "demo@example.com",
-      name: data.name,
-      avatar_url: null,
-      bio: null,
-      created_at: new Date().toISOString(),
-    }
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+    body: JSON.stringify({ name: data.name }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Failed to update profile")
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${AUTH_API}/me`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        accept: "application/json",
-      },
-      body: JSON.stringify({ name: data.name }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || "Failed to update profile")
-    }
-
-    return response.json()
-  } catch (error) {
-    // Fallback to demo mode if API is not available
-    console.log("[v0] API not available, simulating profile update")
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return {
-      id: "demo-user-123",
-      email: "demo@example.com",
-      name: data.name,
-      avatar_url: null,
-      bio: null,
-      created_at: new Date().toISOString(),
-    }
-  }
+  return response.json()
 }
 
 export async function changePassword(token: string, newPassword: string): Promise<{ message: string }> {
-  if (DEMO_MODE) {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return { message: "Password changed successfully (demo mode)" }
-  }
-
-  const response = await fetch(`${API_BASE_URL}${AUTH_API}/change-password`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
