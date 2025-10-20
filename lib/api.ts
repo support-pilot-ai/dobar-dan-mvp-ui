@@ -216,7 +216,8 @@ export async function getUserProfile(token: string): Promise<UserProfile> {
   })
 
   if (!response.ok) {
-    throw new Error("Failed to load user profile")
+    const error = await response.json().catch(() => ({ detail: "Failed to update profile" }))
+    throw new Error(error.detail || "Failed to update profile")
   }
 
   return response.json()
@@ -257,4 +258,19 @@ export async function changePassword(token: string, newPassword: string): Promis
   }
 
   return response.json()
+}
+
+export async function deleteDocument(token: string, documentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to delete document" }))
+    throw new Error(error.detail || "Failed to delete document")
+  }
 }
