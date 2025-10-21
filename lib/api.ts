@@ -274,3 +274,24 @@ export async function deleteDocument(token: string, documentId: string): Promise
     throw new Error(error.detail || "Failed to delete document")
   }
 }
+
+export async function sendFeedback(
+  token: string,
+  messageId: string,
+  data: { feedback: string | null; comment: string },
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/chat/${messageId}/feedback`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to send feedback" }))
+    throw new Error(error.detail || "Failed to send feedback")
+  }
+}

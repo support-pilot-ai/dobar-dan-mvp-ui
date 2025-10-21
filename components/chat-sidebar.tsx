@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { X, FileText, BookOpen, Upload, Trash2 } from "lucide-react"
+import { FileText, BookOpen, Upload, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/auth"
 import { getDocuments, uploadDocument, deleteDocument } from "@/lib/api"
@@ -30,12 +30,12 @@ interface Document {
 }
 
 interface ChatSidebarProps {
-  isOpen: boolean
-  onClose: () => void
+  isCollapsed: boolean
+  onToggle: () => void
   onNewChat: () => void
 }
 
-export function ChatSidebar({ isOpen, onClose, onNewChat }: ChatSidebarProps) {
+export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarProps) {
   const router = useRouter()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -55,54 +55,14 @@ export function ChatSidebar({ isOpen, onClose, onNewChat }: ChatSidebarProps) {
           setDocuments(docData)
         }
       } catch (error) {
-        console.error("Failed to load documents:", error)
-        setDocuments([
-          {
-            id: "demo-1",
-            user_id: "demo-user",
-            filename: "Uputstvo za korištenje.pdf",
-            file_type: "application/pdf",
-            file_size: 245678,
-            file_url: "/demo/uputstvo.pdf",
-            status: "completed",
-            chunk_count: 5,
-            error_message: null,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: "demo-2",
-            user_id: "demo-user",
-            filename: "Primjer dokumenta.docx",
-            file_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            file_size: 123456,
-            file_url: "/demo/primjer.docx",
-            status: "completed",
-            chunk_count: 3,
-            error_message: null,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: "demo-3",
-            user_id: "demo-user",
-            filename: "Bilješke.txt",
-            file_type: "text/plain",
-            file_size: 8192,
-            file_url: "/demo/biljeske.txt",
-            status: "completed",
-            chunk_count: 1,
-            error_message: null,
-            created_at: new Date().toISOString(),
-          },
-        ])
+        setDocuments([])
       } finally {
         setIsLoadingDocs(false)
       }
     }
 
-    if (isOpen) {
-      loadData()
-    }
-  }, [isOpen])
+    loadData()
+  }, [])
 
   const handleUploadDocument = () => {
     fileInputRef.current?.click()
@@ -201,140 +161,190 @@ export function ChatSidebar({ isOpen, onClose, onNewChat }: ChatSidebarProps) {
     }
   }
 
-  const truncateFilename = (filename: string, maxLength = 20): string => {
+  const handleTabClick = (tab: string) => {
+    setActiveTab(tab)
+    if (isCollapsed) {
+      onToggle() // Expand sidebar when clicking on icon in collapsed state
+    }
+  }
+
+  const truncateFilename = (filename: string, maxLength = 15): string => {
     if (filename.length <= maxLength) return filename
     return filename.substring(0, maxLength) + "..."
   }
 
   return (
-    <>
-      {isOpen && <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={onClose} />}
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-sidebar transition-transform duration-200 lg:relative lg:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full",
-        )}
+    <aside
+      className={cn(
+        "relative flex flex-col border-r border-border bg-sidebar transition-all duration-300 ease-in-out shrink-0",
+        isCollapsed ? "w-16" : "w-64",
+      )}
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggle}
+        className="absolute -right-3 top-4 z-10 h-6 w-6 rounded-full border border-border bg-background shadow-sm hover:bg-accent"
       >
-        <div className="flex items-center justify-between p-4">
-          <h2 className="text-lg font-semibold">Meni</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="ml-2 lg:hidden">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+      </Button>
 
-        <Separator />
+      <div className="flex items-center justify-between p-4">
+        {!isCollapsed && <h2 className="text-lg font-semibold">Meni</h2>}
+      </div>
 
-        <TooltipProvider>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mx-2 mt-2 grid w-auto grid-cols-2">
-              <TabsTrigger value="docs" className="text-xs">
-                <FileText className="h-3 w-3 mr-1" />
-                Dokumenti
-              </TabsTrigger>
-              <TabsTrigger value="refs" className="text-xs">
-                <BookOpen className="h-3 w-3 mr-1" />
-                Reference
-              </TabsTrigger>
-            </TabsList>
+      <Separator />
 
-            <TabsContent value="docs" className="flex-1 mt-0">
-              <div className="p-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-2 bg-transparent"
-                  onClick={handleUploadDocument}
-                  disabled={isUploading}
-                >
-                  <Upload className="h-4 w-4" />
-                  {isUploading ? "Učitavanje..." : "Učitaj dokument"}
-                </Button>
-              </div>
-              <ScrollArea className="h-full px-2">
-                <div className="space-y-1 py-2">
-                  {isLoadingDocs ? (
-                    <>
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-2">
-                          <Skeleton className="h-4 w-4 shrink-0 bg-gray-200" />
-                          <div className="flex-1 space-y-2">
-                            <Skeleton className="h-4 w-full bg-gray-200" />
-                            <Skeleton className="h-3 w-16 bg-gray-200" />
+      <TooltipProvider>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          {!isCollapsed ? (
+            <>
+              <TabsList className="mx-2 mt-2 grid w-auto grid-cols-2">
+                <TabsTrigger value="docs" className="text-xs">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Dokumenti
+                </TabsTrigger>
+                <TabsTrigger value="refs" className="text-xs">
+                  <BookOpen className="h-3 w-3 mr-1" />
+                  Reference
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="docs" className="flex-1 mt-0">
+                <div className="p-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 bg-transparent"
+                    onClick={handleUploadDocument}
+                    disabled={isUploading}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {isUploading ? "Učitavanje..." : "Učitaj dokument"}
+                  </Button>
+                </div>
+                <ScrollArea className="h-full px-2">
+                  <div className="space-y-1 py-2">
+                    {isLoadingDocs ? (
+                      <>
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="flex items-center gap-2 px-3 py-2">
+                            <Skeleton className="h-4 w-4 shrink-0 bg-gray-200" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-full bg-gray-200" />
+                              <Skeleton className="h-3 w-16 bg-gray-200" />
+                            </div>
                           </div>
+                        ))}
+                      </>
+                    ) : documents.length === 0 ? (
+                      <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        Nema učitanih dokumenata
+                      </div>
+                    ) : (
+                      documents.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-md">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm font-medium cursor-default">
+                                {truncateFilename(doc.filename)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>{doc.filename}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+                            onClick={(e) => handleDeleteDocument(doc.id, doc.filename, e)}
+                            disabled={deletingDocId === doc.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ))}
-                    </>
-                  ) : documents.length === 0 ? (
-                    <div className="px-3 py-8 text-center text-sm text-muted-foreground">Nema učitanih dokumenata</div>
-                  ) : (
-                    documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-md">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-sm font-medium cursor-default">{truncateFilename(doc.filename)}</span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>{doc.filename}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 shrink-0 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                          onClick={(e) => handleDeleteDocument(doc.id, doc.filename, e)}
-                          disabled={deletingDocId === doc.id}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="refs" className="flex-1 mt-0">
+                <ScrollArea className="h-full px-2">
+                  <div className="space-y-1 py-2">
+                    <div className="px-3 py-2">
+                      <h3 className="text-sm font-semibold mb-2">Brze reference</h3>
+                      <div className="space-y-1">
+                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
+                          <BookOpen className="h-4 w-4 shrink-0" />
+                          Vodič za početnike
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
+                          <BookOpen className="h-4 w-4 shrink-0" />
+                          API Dokumentacija
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
+                          <BookOpen className="h-4 w-4 shrink-0" />
+                          Najbolje prakse
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
+                          <BookOpen className="h-4 w-4 shrink-0" />
+                          Često postavljana pitanja
                         </Button>
                       </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="refs" className="flex-1 mt-0">
-              <ScrollArea className="h-full px-2">
-                <div className="space-y-1 py-2">
-                  <div className="px-3 py-2">
-                    <h3 className="text-sm font-semibold mb-2">Brze reference</h3>
-                    <div className="space-y-1">
-                      <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                        <BookOpen className="h-4 w-4 shrink-0" />
-                        Vodič za početnike
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                        <BookOpen className="h-4 w-4 shrink-0" />
-                        API Dokumentacija
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                        <BookOpen className="h-4 w-4 shrink-0" />
-                        Najbolje prakse
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                        <BookOpen className="h-4 w-4 shrink-0" />
-                        Često postavljana pitanja
-                      </Button>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="px-3 py-2">
+                      <h3 className="text-sm font-semibold mb-2">Nedavni izvori</h3>
+                      <div className="text-xs text-muted-foreground">Nema citiranih izvora</div>
                     </div>
                   </div>
-                  <Separator className="my-2" />
-                  <div className="px-3 py-2">
-                    <h3 className="text-sm font-semibold mb-2">Nedavni izvori</h3>
-                    <div className="text-xs text-muted-foreground">Nema citiranih izvora</div>
-                  </div>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </TooltipProvider>
-      </aside>
-    </>
+                </ScrollArea>
+              </TabsContent>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4 mt-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === "docs" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-12 w-12"
+                    onClick={() => handleTabClick("docs")}
+                  >
+                    <FileText className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Dokumenti</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === "refs" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-12 w-12"
+                    onClick={() => handleTabClick("refs")}
+                  >
+                    <BookOpen className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Reference</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+        </Tabs>
+      </TooltipProvider>
+    </aside>
   )
 }

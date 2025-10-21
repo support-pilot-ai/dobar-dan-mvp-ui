@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Send, Menu, Settings, LogOut, User, ThumbsDown, ThumbsUp } from "lucide-react"
+import { Send, Settings, LogOut, User, ThumbsDown, ThumbsUp, MessageSquare } from "lucide-react"
 import { isAuthenticated, getAuthToken, removeAuthToken } from "@/lib/auth"
-import { sendMessage } from "@/lib/api"
+import { sendMessage, sendFeedback } from "@/lib/api"
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -171,7 +171,7 @@ export default function ChatPage() {
   ])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [feedbackDialog, setFeedbackDialog] = useState<{
     isOpen: boolean
     messageId: string | null
@@ -276,44 +276,105 @@ export default function ChatPage() {
     router.push("/settings")
   }
 
-  const handleFeedback = (messageId: string, type: "positive" | "negative") => {
+  const handleFeedback = async (messageId: string, type: "like" | "dislike") => {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        router.push("/login")
+        return
+      }
+
+      const message = messages.find((msg) => msg.id === messageId)
+      const existingComment = message?.feedbackMessage || ""
+
+      await sendFeedback(token, messageId, {
+        feedback: type,
+        comment: existingComment,
+      })
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                feedback: type === "like" ? "positive" : "negative",
+              }
+            : msg,
+        ),
+      )
+
+      toast({
+        title: "Feedback poslat",
+        description: "Hvala na povratnoj informaciji!",
+      })
+    } catch (error) {
+      console.error("Failed to send feedback:", error)
+      toast({
+        title: "Greška",
+        description: "Nije moguće poslati feedback. Pokušajte ponovo.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCommentFeedback = (messageId: string) => {
+    const message = messages.find((msg) => msg.id === messageId)
+    const existingFeedback =
+      message?.feedback === "positive" ? "like" : message?.feedback === "negative" ? "dislike" : null
+
     setFeedbackDialog({
       isOpen: true,
       messageId,
-      type,
+      type: message?.feedback || null,
     })
     setFeedbackText("")
   }
 
-  const handleSubmitFeedback = () => {
-    if (!feedbackDialog.messageId || !feedbackDialog.type) return
+  const handleSubmitFeedback = async () => {
+    if (!feedbackDialog.messageId) return
 
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === feedbackDialog.messageId
-          ? {
-              ...msg,
-              feedback: feedbackDialog.type,
-              feedbackMessage: feedbackText.trim() || undefined,
-            }
-          : msg,
-      ),
-    )
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        router.push("/login")
+        return
+      }
 
-    console.log(
-      `[v0] ${feedbackDialog.type === "positive" ? "Positive" : "Negative"} feedback for message ${feedbackDialog.messageId}:`,
-      feedbackText.trim() || "(no message)",
-    )
+      const message = messages.find((msg) => msg.id === feedbackDialog.messageId)
+      const existingFeedback =
+        message?.feedback === "positive" ? "like" : message?.feedback === "negative" ? "dislike" : null
 
-    toast({
-      title: "Feedback poslat",
-      description: "Hvala na povratnoj informaciji!",
-    })
+      await sendFeedback(token, feedbackDialog.messageId, {
+        feedback: existingFeedback,
+        comment: feedbackText.trim(),
+      })
 
-    setFeedbackDialog({ isOpen: false, messageId: null, type: null })
-    setFeedbackText("")
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === feedbackDialog.messageId
+            ? {
+                ...msg,
+                feedbackMessage: feedbackText.trim() || undefined,
+              }
+            : msg,
+        ),
+      )
 
-    // TODO: Send feedback to API
+      toast({
+        title: "Feedback poslat",
+        description: "Hvala na povratnoj informaciji!",
+      })
+
+      setFeedbackDialog({ isOpen: false, messageId: null, type: null })
+      setFeedbackText("")
+    } catch (error) {
+      console.error("Failed to send feedback:", error)
+      toast({
+        title: "Greška",
+        description: "Nije moguće poslati feedback. Pokušajte ponovo.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleCancelFeedback = () => {
@@ -323,15 +384,16 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <ChatSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNewChat={handleNewChat} />
+      <ChatSidebar
+        isCollapsed={isSidebarCollapsed}
+        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onNewChat={handleNewChat}
+      />
 
       <div className="flex flex-1 flex-col h-full overflow-hidden">
         {/* Header */}
         <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 shrink-0">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden">
-              <Menu className="h-5 w-5" />
-            </Button>
             <h1 className="text-lg font-semibold">Chat Asistent</h1>
           </div>
 
@@ -398,7 +460,7 @@ export default function ChatPage() {
                               "h-7 w-7",
                               message.feedback === "positive" && "text-green-600 hover:text-green-600",
                             )}
-                            onClick={() => handleFeedback(message.id, "positive")}
+                            onClick={() => handleFeedback(message.id, "like")}
                           >
                             <ThumbsUp className="h-4 w-4" />
                           </Button>
@@ -409,9 +471,17 @@ export default function ChatPage() {
                               "h-7 w-7",
                               message.feedback === "negative" && "text-red-600 hover:text-red-600",
                             )}
-                            onClick={() => handleFeedback(message.id, "negative")}
+                            onClick={() => handleFeedback(message.id, "dislike")}
                           >
                             <ThumbsDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-7 w-7", message.feedbackMessage && "text-blue-600 hover:text-blue-600")}
+                            onClick={() => handleCommentFeedback(message.id)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
@@ -476,14 +546,10 @@ export default function ChatPage() {
       <Dialog open={feedbackDialog.isOpen} onOpenChange={(open) => !open && handleCancelFeedback()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {feedbackDialog.type === "positive" ? "Pozitivan feedback" : "Negativan feedback"}
-            </DialogTitle>
+            <DialogTitle>Feedback</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Molimo vas da podijelite više detalja o vašem iskustvu (opciono):
-            </p>
+            <p className="text-sm text-muted-foreground">Molimo vas da podijelite više detalja o vašem iskustvu:</p>
             <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
