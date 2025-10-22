@@ -40,6 +40,12 @@ export interface ChatMessageResponse {
   sources: string[] | null
   response_time: number
   created_at: string
+  reference?: Array<{
+    filename: string
+    chunk_text: string
+    similarity: number
+    document_id: string
+  }>
 }
 
 export interface ChatSession {
@@ -198,11 +204,37 @@ export async function uploadDocument(token: string, file: File): Promise<Documen
   })
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Failed to upload document")
+    if (response.status >= 400 && response.status < 500) {
+      try {
+        const error = await response.json()
+        const errorMessage = error.detail || "Nije moguće učitati dokument."
+        throw new Error(errorMessage)
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message !== "Nije moguće učitati dokument.") {
+          throw parseError
+        }
+        throw new Error("Nije moguće učitati dokument.")
+      }
+    }
+    throw new Error("Nije moguće učitati dokument.")
   }
 
   return response.json()
+}
+
+export async function deleteDocument(token: string, documentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to delete document" }))
+    throw new Error(error.detail || "Failed to delete document")
+  }
 }
 
 // User Profile APIs
@@ -216,8 +248,7 @@ export async function getUserProfile(token: string): Promise<UserProfile> {
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Failed to update profile" }))
-    throw new Error(error.detail || "Failed to update profile")
+    throw new Error("Failed to load user profile")
   }
 
   return response.json()
@@ -235,7 +266,7 @@ export async function updateUserProfile(token: string, data: { name: string }): 
   })
 
   if (!response.ok) {
-    const error = await response.json()
+    const error = await response.json().catch(() => ({ detail: "Failed to update profile" }))
     throw new Error(error.detail || "Failed to update profile")
   }
 
@@ -260,21 +291,7 @@ export async function changePassword(token: string, newPassword: string): Promis
   return response.json()
 }
 
-export async function deleteDocument(token: string, documentId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      accept: "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Failed to delete document" }))
-    throw new Error(error.detail || "Failed to delete document")
-  }
-}
-
+// Feedback API function
 export async function sendFeedback(
   token: string,
   messageId: string,
@@ -294,4 +311,43 @@ export async function sendFeedback(
     const error = await response.json().catch(() => ({ detail: "Failed to send feedback" }))
     throw new Error(error.detail || "Failed to send feedback")
   }
+}
+
+export interface ChatHistoryItem {
+  id: string
+  user_id: string
+  type: "user" | "assistant"
+  content: string
+  sources: Array<{
+    filename: string
+    chunk_text: string
+    similarity: number
+    document_id: string
+  }> | null
+  reference: Array<{
+    filename: string
+    chunk_text: string
+    similarity: number
+    document_id: string
+  }> | null
+  response_time: number | null
+  feedback: "like" | "dislike" | null
+  feedback_comment: string | null
+  created_at: string
+}
+
+export async function getChatHistory(token: string, limit = 5): Promise<ChatHistoryItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to load chat history")
+  }
+
+  return response.json()
 }

@@ -15,6 +15,16 @@ import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/auth"
 import { getDocuments, uploadDocument, deleteDocument } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Document {
   id: string
@@ -33,9 +43,15 @@ interface ChatSidebarProps {
   isCollapsed: boolean
   onToggle: () => void
   onNewChat: () => void
+  references?: Array<{
+    filename: string
+    chunk_text: string
+    similarity: number
+    document_id: string
+  }>
 }
 
-export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarProps) {
+export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] }: ChatSidebarProps) {
   const router = useRouter()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -44,6 +60,8 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarPro
   const [isLoadingDocs, setIsLoadingDocs] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -106,20 +124,13 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarPro
 
       const uploadedDoc = await uploadDocument(token, file)
 
-      // Add the new document to the list
       setDocuments((prev) => [uploadedDoc, ...prev])
 
       toast({
         title: "Uspješno",
         description: `Dokument "${file.name}" je uspješno učitan.`,
       })
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
     } catch (error) {
-      console.error("Failed to upload document:", error)
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Nije moguće učitati dokument.",
@@ -127,30 +138,37 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarPro
       })
     } finally {
       setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     }
   }
 
-  const handleDeleteDocument = async (docId: string, docName: string, event: React.MouseEvent) => {
-    event.stopPropagation() // Prevent button click from triggering
+  const handleDeleteDocument = (docId: string, docName: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+    setDocToDelete({ id: docId, name: docName })
+    setDeleteConfirmOpen(true)
+  }
 
-    setDeletingDocId(docId)
+  const confirmDelete = async () => {
+    if (!docToDelete) return
+
+    setDeletingDocId(docToDelete.id)
     try {
       const token = getAuthToken()
       if (!token) {
         throw new Error("Niste prijavljeni")
       }
 
-      await deleteDocument(token, docId)
+      await deleteDocument(token, docToDelete.id)
 
-      // Remove the document from the list
-      setDocuments((prev) => prev.filter((doc) => doc.id !== docId))
+      setDocuments((prev) => prev.filter((doc) => doc.id !== docToDelete.id))
 
       toast({
         title: "Uspješno",
-        description: `Dokument "${docName}" je uspješno obrisan.`,
+        description: `Dokument "${docToDelete.name}" je uspješno obrisan.`,
       })
     } catch (error) {
-      console.error("Failed to delete document:", error)
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Nije moguće obrisati dokument.",
@@ -158,6 +176,8 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarPro
       })
     } finally {
       setDeletingDocId(null)
+      setDeleteConfirmOpen(false)
+      setDocToDelete(null)
     }
   }
 
@@ -280,30 +300,31 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarPro
                 <ScrollArea className="h-full px-2">
                   <div className="space-y-1 py-2">
                     <div className="px-3 py-2">
-                      <h3 className="text-sm font-semibold mb-2">Brze reference</h3>
-                      <div className="space-y-1">
-                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                          <BookOpen className="h-4 w-4 shrink-0" />
-                          Vodič za početnike
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                          <BookOpen className="h-4 w-4 shrink-0" />
-                          API Dokumentacija
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                          <BookOpen className="h-4 w-4 shrink-0" />
-                          Najbolje prakse
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start gap-2 text-left text-sm">
-                          <BookOpen className="h-4 w-4 shrink-0" />
-                          Često postavljana pitanja
-                        </Button>
-                      </div>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="px-3 py-2">
-                      <h3 className="text-sm font-semibold mb-2">Nedavni izvori</h3>
-                      <div className="text-xs text-muted-foreground">Nema citiranih izvora</div>
+                      <h3 className="text-sm font-semibold mb-2">Citirani izvori</h3>
+                      {references.length === 0 ? (
+                        <div className="text-xs text-muted-foreground">Nema citiranih izvora</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {references.map((ref, index) => (
+                            <div
+                              key={`${ref.document_id}-${index}`}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-md"
+                            >
+                              <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-sm cursor-default truncate">
+                                    {truncateFilename(ref.filename, 25)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p>{ref.filename}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </ScrollArea>
@@ -345,6 +366,22 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat }: ChatSidebarPro
           )}
         </Tabs>
       </TooltipProvider>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Obriši dokument</AlertDialogTitle>
+            <AlertDialogDescription>
+              Da li ste sigurni da želite da obrišete dokument "{docToDelete?.name}"? Ova akcija se ne može poništiti.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Otkaži</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Obriši
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   )
 }

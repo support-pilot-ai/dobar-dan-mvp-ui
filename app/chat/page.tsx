@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Send, Settings, LogOut, User, ThumbsDown, ThumbsUp, MessageSquare } from "lucide-react"
 import { isAuthenticated, getAuthToken, removeAuthToken } from "@/lib/auth"
-import { sendMessage, sendFeedback } from "@/lib/api"
+import { sendMessage, sendFeedback, getChatHistory } from "@/lib/api"
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -23,152 +23,18 @@ interface Message {
   timestamp: Date
   feedback?: "positive" | "negative" | null
   feedbackMessage?: string
+  reference?: Array<{
+    filename: string
+    chunk_text: string
+    similarity: number
+    document_id: string
+  }>
 }
 
 export default function ChatPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "user",
-      content: "Zdravo! Kako mogu da ti pomognem?",
-      timestamp: new Date(Date.now() - 600000),
-    },
-    {
-      id: "2",
-      role: "assistant",
-      content: "Zdravo! Ja sam tvoj AI asistent. Mogu ti pomoći sa različitim pitanjima i zadacima. Šta te zanima?",
-      timestamp: new Date(Date.now() - 570000),
-      feedback: null,
-    },
-    {
-      id: "3",
-      role: "user",
-      content: "Možeš li mi objasniti kako funkcioniše upload dokumenata?",
-      timestamp: new Date(Date.now() - 540000),
-    },
-    {
-      id: "4",
-      role: "assistant",
-      content:
-        "Naravno! Upload dokumenata je jednostavan proces. Klikni na dugme 'Učitaj dokument' u sidebaru, izaberi PDF, TXT ili DOCX fajl sa svog računara, i sistem će automatski procesirati dokument. Nakon što je dokument procesiran, možeš postavljati pitanja o njegovom sadržaju.",
-      timestamp: new Date(Date.now() - 510000),
-      feedback: null,
-    },
-    {
-      id: "5",
-      role: "user",
-      content: "Koliko dokumenata mogu da upload-ujem odjednom?",
-      timestamp: new Date(Date.now() - 480000),
-    },
-    {
-      id: "6",
-      role: "assistant",
-      content:
-        "Možeš upload-ovati dokumente jedan po jedan. Svaki dokument se procesira pojedinačno, što omogućava bolju kontrolu i praćenje statusa svakog fajla. Nema ograničenja na ukupan broj dokumenata koje možeš imati u sistemu.",
-      timestamp: new Date(Date.now() - 450000),
-      feedback: null,
-    },
-    {
-      id: "7",
-      role: "user",
-      content: "Kako mogu da obrišem dokument koji više ne trebam?",
-      timestamp: new Date(Date.now() - 420000),
-    },
-    {
-      id: "8",
-      role: "assistant",
-      content:
-        "Brisanje dokumenta je vrlo jednostavno! U sidebaru, pored svakog dokumenta nalazi se ikonica za brisanje (korpa). Klikni na tu ikonicu i dokument će biti trajno obrisan iz sistema. Obrati pažnju da je ova akcija nepovratna.",
-      timestamp: new Date(Date.now() - 390000),
-      feedback: null,
-    },
-    {
-      id: "9",
-      role: "user",
-      content: "Koje vrste fajlova mogu da upload-ujem?",
-      timestamp: new Date(Date.now() - 360000),
-    },
-    {
-      id: "10",
-      role: "assistant",
-      content:
-        "Trenutno sistem podržava tri tipa fajlova: PDF (.pdf), tekstualne dokumente (.txt) i Word dokumente (.docx). Maksimalna veličina fajla je 10MB. Ovi formati pokrivaju većinu standardnih dokumenata koje korisnici obično koriste.",
-      timestamp: new Date(Date.now() - 330000),
-      feedback: null,
-    },
-    {
-      id: "11",
-      role: "user",
-      content: "Kako mogu da promenim svoje korisničke podatke?",
-      timestamp: new Date(Date.now() - 300000),
-    },
-    {
-      id: "12",
-      role: "assistant",
-      content:
-        "Za promenu korisničkih podataka, klikni na avatar ikonicu u gornjem desnom uglu i izaberi 'Postavke korisnika'. Tamo možeš promeniti svoje ime i lozinku. Sve promene se čuvaju automatski nakon što klikneš na dugme 'Sačuvaj promjene'.",
-      timestamp: new Date(Date.now() - 270000),
-      feedback: null,
-    },
-    {
-      id: "13",
-      role: "user",
-      content: "Da li mogu da pregledam istoriju svojih razgovora?",
-      timestamp: new Date(Date.now() - 240000),
-    },
-    {
-      id: "14",
-      role: "assistant",
-      content:
-        "Trenutno sistem čuva samo aktivnu sesiju razgovora. Kada se odjaviš ili osvežiš stranicu, istorija razgovora se briše. Ova funkcionalnost je dizajnirana da obezbedi privatnost i sigurnost tvojih podataka.",
-      timestamp: new Date(Date.now() - 210000),
-      feedback: null,
-    },
-    {
-      id: "15",
-      role: "user",
-      content: "Šta znači kada dokument ima status 'processing'?",
-      timestamp: new Date(Date.now() - 180000),
-    },
-    {
-      id: "16",
-      role: "assistant",
-      content:
-        "Status 'processing' znači da sistem trenutno analizira i indeksira sadržaj tvog dokumenta. Ovaj proces obično traje nekoliko sekundi do minut, zavisno od veličine dokumenta. Nakon što se procesiranje završi, status će se promeniti u 'completed' i moći ćeš postavljati pitanja o sadržaju dokumenta.",
-      timestamp: new Date(Date.now() - 150000),
-      feedback: null,
-    },
-    {
-      id: "17",
-      role: "user",
-      content: "Kako funkcioniše feedback sistem?",
-      timestamp: new Date(Date.now() - 120000),
-    },
-    {
-      id: "18",
-      role: "assistant",
-      content:
-        "Feedback sistem ti omogućava da oceniš kvalitet mojih odgovora. Ispod svakog mog odgovora nalaze se dve ikone - thumbs up za pozitivan feedback i thumbs down za negativan feedback. Kada klikneš na jednu od njih, otvara se prozor gde možeš ostaviti dodatnu tekstualnu poruku sa detaljima o svom iskustvu. Tvoj feedback nam pomaže da poboljšamo kvalitet odgovora!",
-      timestamp: new Date(Date.now() - 90000),
-      feedback: null,
-    },
-    {
-      id: "19",
-      role: "user",
-      content: "Da li mogu da koristim aplikaciju na mobilnom telefonu?",
-      timestamp: new Date(Date.now() - 60000),
-    },
-    {
-      id: "20",
-      role: "assistant",
-      content:
-        "Da, aplikacija je potpuno responzivna i prilagođena za korišćenje na mobilnim uređajima! Na manjim ekranima, sidebar se automatski sakriva i možeš ga otvoriti klikom na meni ikonicu u gornjem levom uglu. Sve funkcionalnosti su dostupne i na mobilnim uređajima, uključujući upload dokumenata, chat i postavke.",
-      timestamp: new Date(Date.now() - 30000),
-      feedback: null,
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -190,11 +56,38 @@ export default function ChatPage() {
       router.push("/login")
       return
     }
+
+    const loadChatHistory = async () => {
+      try {
+        const token = getAuthToken()
+        if (!token) {
+          router.push("/login")
+          return
+        }
+
+        const history = await getChatHistory(token, 8)
+
+        const mappedMessages: Message[] = history.map((item) => ({
+          id: item.id,
+          role: item.type,
+          content: item.content,
+          timestamp: new Date(item.created_at),
+          feedback: item.feedback === "like" ? "positive" : item.feedback === "dislike" ? "negative" : null,
+          feedbackMessage: item.feedback_comment || undefined,
+          reference: item.reference || undefined,
+        }))
+
+        setMessages(mappedMessages)
+      } catch (error) {
+        console.error("Failed to load chat history:", error)
+      }
+    }
+
+    loadChatHistory()
   }, [router])
 
   useEffect(() => {
     if (scrollRef.current) {
-      // Use setTimeout to ensure DOM is fully updated before scrolling
       setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTo({
@@ -235,6 +128,7 @@ export default function ChatPage() {
         role: "assistant",
         content: response.content,
         timestamp: new Date(response.created_at),
+        reference: response.reference,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -382,12 +276,20 @@ export default function ChatPage() {
     setFeedbackText("")
   }
 
+  const lastAssistantMessage = messages
+    .filter((msg) => msg.role === "assistant")
+    .reverse()
+    .find((msg) => msg.reference && msg.reference.length > 0)
+
+  const currentReferences = lastAssistantMessage?.reference || []
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <ChatSidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onNewChat={handleNewChat}
+        references={currentReferences}
       />
 
       <div className="flex flex-1 flex-col h-full overflow-hidden">
