@@ -78,7 +78,7 @@ export interface UserProfile {
 
 // Authentication APIs
 export async function registerUser(data: UserRegister): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -110,7 +110,7 @@ export async function registerUser(data: UserRegister): Promise<AuthResponse> {
 }
 
 export async function loginUser(data: UserLogin): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -239,7 +239,7 @@ export async function deleteDocument(token: string, documentId: string): Promise
 
 // User Profile APIs
 export async function getUserProfile(token: string): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -255,7 +255,7 @@ export async function getUserProfile(token: string): Promise<UserProfile> {
 }
 
 export async function updateUserProfile(token: string, data: { name: string }): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -274,7 +274,7 @@ export async function updateUserProfile(token: string, data: { name: string }): 
 }
 
 export async function changePassword(token: string, newPassword: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
