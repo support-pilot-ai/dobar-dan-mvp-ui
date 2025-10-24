@@ -163,7 +163,7 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Promjena lozinke</CardTitle>
-                <CardDescription>Ažurirajte svoju lozinku da bi vaš nalog bio siguran</CardDescription>
+                <CardDescription>Ažurirajte svoju lozinku da bi vaš račun bio siguran</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

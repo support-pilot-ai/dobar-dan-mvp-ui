@@ -34,8 +34,8 @@ export default function RegisterPage() {
       await registerUser(formData)
       setIsSuccess(true)
       toast({
-        title: "Nalog kreiran!",
-        description: `Poslali smo ti email na ${email}. Provjeri email i potvrdi nalog da bi se prijavio. (Nemoj zaboraviti pogledati i spam!)`,
+        title: "Račun kreiran!",
+        description: `Poslali smo ti email na ${email}. Provjeri email i potvrdi račun da bi se prijavio. (Nemoj zaboraviti pogledati i spam!)`,
         duration: 10000,
         variant: "success"
       })
@@ -54,7 +54,7 @@ export default function RegisterPage() {
             <div className="flex items-center justify-center mb-4">
               <CheckCircle2 className="h-16 w-16 text-green-500" />
             </div>
-            <CardTitle className="text-2xl font-bold text-balance text-center">Nalog kreiran!</CardTitle>
+            <CardTitle className="text-2xl font-bold text-balance text-center">Račun kreiran!</CardTitle>
             <CardDescription className="text-center">
               Poslali smo ti email na <strong>{email}</strong>
             </CardDescription>
@@ -62,7 +62,7 @@ export default function RegisterPage() {
           <CardContent className="space-y-4">
             <Alert>
               <AlertDescription className="text-center">
-                Provjeri email i potvrdi nalog da bi se prijavio.
+                Provjeri email i potvrdi račun da bi se prijavio.
                 <br />
                 <span className="text-sm text-muted-foreground">(Nemoj zaboraviti pogledati i spam!)</span>
               </AlertDescription>
@@ -83,7 +83,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-balance">Dobar Dan!</CardTitle>
-          <CardDescription>Kreiraj svoj nalog</CardDescription>
+          <CardDescription>Kreiraj svoj račun</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -132,10 +132,10 @@ export default function RegisterPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4 mt-6">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Kreiranje naloga..." : "Kreiraj nalog"}
+              {isLoading ? "Kreiranje računa..." : "Kreiraj račun"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              Već imaš nalog?{" "}
+              Već imaš račun?{" "}
               <Link href="/login" className="text-primary hover:underline">
                 Prijavi se
               </Link>

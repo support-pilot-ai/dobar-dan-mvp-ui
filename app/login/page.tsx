@@ -42,7 +42,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-balance">Dobar Dan!</CardTitle>
-          <CardDescription>Prijavi se na svoj nalog</CardDescription>
+          <CardDescription>Prijavi se na svoj račun</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -83,7 +83,7 @@ export default function LoginPage() {
             <p className="text-sm text-center text-muted-foreground">
               {"Novi si ovdje? "}
               <Link href="/register" className="text-primary hover:underline">
-                Kreiraj nalog
+                Kreiraj račun
               </Link>
             </p>
           </CardFooter>
