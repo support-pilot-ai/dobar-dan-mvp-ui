@@ -11,15 +11,18 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { registerUser } from "@/lib/api"
-import { setAuthToken } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
+import { CheckCircle2 } from "lucide-react"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,9 +31,14 @@ export default function RegisterPage() {
 
     try {
       const formData = { email, password, name: fullName }
-      const response = await registerUser(formData)
-      setAuthToken(response.access_token)
-      router.push("/chat")
+      await registerUser(formData)
+      setIsSuccess(true)
+      toast({
+        title: "Nalog kreiran!",
+        description: `Poslali smo ti email na ${email}. Provjeri email i potvrdi nalog da bi se prijavio. (Nemoj zaboraviti pogledati i spam!)`,
+        duration: 10000,
+        variant: "success"
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
     } finally {
@@ -38,12 +46,44 @@ export default function RegisterPage() {
     }
   }
 
+  if (isSuccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-16 w-16 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-balance text-center">Nalog kreiran!</CardTitle>
+            <CardDescription className="text-center">
+              Poslali smo ti email na <strong>{email}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertDescription className="text-center">
+                Provjeri email i potvrdi nalog da bi se prijavio.
+                <br />
+                <span className="text-sm text-muted-foreground">(Nemoj zaboraviti pogledati i spam!)</span>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button onClick={() => router.push("/login")} className="w-full">
+              Idi na prijavu
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-balance">Kreiraj nalog</CardTitle>
-          <CardDescription>Unesite svoje informacije da započnete</CardDescription>
+          <CardTitle className="text-2xl font-bold text-balance">Dobar Dan!</CardTitle>
+          <CardDescription>Kreiraj svoj nalog</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -69,7 +109,7 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="vas@primjer.com"
+                placeholder="tvoj@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -77,11 +117,11 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Lozinka</Label>
+              <Label htmlFor="password">Šifra</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Kreirajte lozinku"
+                placeholder="Kreirajte šifru"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -92,7 +132,7 @@ export default function RegisterPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4 mt-6">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Kreiranje naloga..." : "Registruj se"}
+              {isLoading ? "Kreiranje naloga..." : "Kreiraj nalog"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Već imate nalog?{" "}

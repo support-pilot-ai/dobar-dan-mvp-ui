@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,7 +10,20 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { FileText, BookOpen, Upload, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  FileText,
+  BookOpen,
+  Upload,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/auth"
 import { getDocuments, uploadDocument, deleteDocument } from "@/lib/api"
@@ -49,9 +62,22 @@ interface ChatSidebarProps {
     similarity: number
     document_id: string
   }>
+  onDocumentsChange?: (count: number) => void
+  onLogout: () => void
+  onSettings: () => void
+  onUploadTrigger?: (triggerFn: () => void) => void
 }
 
-export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] }: ChatSidebarProps) {
+export function ChatSidebar({
+  isCollapsed,
+  onToggle,
+  onNewChat,
+  references = [],
+  onDocumentsChange,
+  onLogout,
+  onSettings,
+  onUploadTrigger,
+}: ChatSidebarProps) {
   const router = useRouter()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -82,9 +108,19 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
     loadData()
   }, [])
 
-  const handleUploadDocument = () => {
+  useEffect(() => {
+    onDocumentsChange?.(documents.length)
+  }, [documents.length, onDocumentsChange])
+
+  const handleUploadDocument = useCallback(() => {
     fileInputRef.current?.click()
-  }
+  }, [])
+
+  useEffect(() => {
+    if (onUploadTrigger) {
+      onUploadTrigger(handleUploadDocument)
+    }
+  }, [onUploadTrigger, handleUploadDocument])
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -129,6 +165,7 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
       toast({
         title: "Uspješno",
         description: `Dokument "${file.name}" je uspješno učitan.`,
+        variant: "success",
       })
     } catch (error) {
       toast({
@@ -167,6 +204,7 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
       toast({
         title: "Uspješno",
         description: `Dokument "${docToDelete.name}" je uspješno obrisan.`,
+        variant: "success",
       })
     } catch (error) {
       toast({
@@ -210,7 +248,7 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
       </Button>
 
       <div className="flex items-center justify-between p-4">
-        {!isCollapsed && <h2 className="text-lg font-semibold">Meni</h2>}
+        {!isCollapsed && <h2 className="text-lg font-semibold">Dobar Dan</h2>}
       </div>
 
       <Separator />
@@ -241,12 +279,17 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
                   />
                   <Button
                     variant="outline"
-                    className="w-full justify-start gap-2 bg-transparent"
+                    className={cn(
+                      "w-full justify-start gap-2 transition-all duration-200",
+                      isUploading
+                        ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600 animate-pulse cursor-not-allowed"
+                        : "bg-orange-500 text-white border-orange-500 hover:bg-orange-400 hover:text-white",
+                    )}
                     onClick={handleUploadDocument}
                     disabled={isUploading}
                   >
-                    <Upload className="h-4 w-4" />
-                    {isUploading ? "Učitavanje..." : "Učitaj dokument"}
+                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {isUploading ? "Učitavanje..." : "Dodaj dokument"}
                   </Button>
                 </div>
                 <ScrollArea className="h-full px-2">
@@ -308,7 +351,7 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
                           {references.map((ref, index) => (
                             <div
                               key={`${ref.document_id}-${index}`}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded-md"
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent/50"
                             >
                               <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
                               <Tooltip>
@@ -366,6 +409,67 @@ export function ChatSidebar({ isCollapsed, onToggle, onNewChat, references = [] 
           )}
         </Tabs>
       </TooltipProvider>
+
+      <Separator />
+      <div className="p-2">
+        {!isCollapsed ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start gap-3 h-auto py-3 px-3 hover:bg-[#F4A460]">
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start flex-1 min-w-0 gap-1">
+                  <span className="text-sm font-medium">Korisnik</span>
+                  <span className="text-xs text-muted-foreground">Besplatna verzija</span>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="w-48">
+              <DropdownMenuItem onClick={onSettings} className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                Postavke korisnika
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                Odjavi se
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-12 w-12 mx-auto hover:bg-[#F4A460]">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="right" className="w-48">
+                  <DropdownMenuItem onClick={onSettings} className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Postavke korisnika
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Odjavi se
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Korisnički meni</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

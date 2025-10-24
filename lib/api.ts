@@ -336,7 +336,7 @@ export interface ChatHistoryItem {
   created_at: string
 }
 
-export async function getChatHistory(token: string, limit = 5): Promise<ChatHistoryItem[]> {
+export async function getChatHistory(token: string, limit = 6): Promise<ChatHistoryItem[]> {
   const response = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`, {
     method: "GET",
     headers: {

@@ -2,14 +2,13 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Send, Settings, LogOut, User, ThumbsDown, ThumbsUp, MessageSquare } from "lucide-react"
+import { Send, ThumbsDown, ThumbsUp, MessageSquare, Upload } from "lucide-react"
 import { isAuthenticated, getAuthToken, removeAuthToken } from "@/lib/auth"
 import { sendMessage, sendFeedback, getChatHistory } from "@/lib/api"
 import { ChatSidebar } from "@/components/chat-sidebar"
@@ -38,6 +37,8 @@ export default function ChatPage() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [documentCount, setDocumentCount] = useState(0)
+  const [triggerUpload, setTriggerUpload] = useState<(() => void) | null>(null)
   const [feedbackDialog, setFeedbackDialog] = useState<{
     isOpen: boolean
     messageId: string | null
@@ -58,29 +59,25 @@ export default function ChatPage() {
     }
 
     const loadChatHistory = async () => {
-      try {
-        const token = getAuthToken()
-        if (!token) {
-          router.push("/login")
-          return
-        }
-
-        const history = await getChatHistory(token, 8)
-
-        const mappedMessages: Message[] = history.map((item) => ({
-          id: item.id,
-          role: item.type,
-          content: item.content,
-          timestamp: new Date(item.created_at),
-          feedback: item.feedback === "like" ? "positive" : item.feedback === "dislike" ? "negative" : null,
-          feedbackMessage: item.feedback_comment || undefined,
-          reference: item.reference || undefined,
-        }))
-
-        setMessages(mappedMessages)
-      } catch (error) {
-        console.error("Failed to load chat history:", error)
+      const token = getAuthToken()
+      if (!token) {
+        router.push("/login")
+        return
       }
+
+      const history = await getChatHistory(token, 5)
+
+      const mappedMessages: Message[] = history.map((item) => ({
+        id: item.id,
+        role: item.type,
+        content: item.content,
+        timestamp: new Date(item.created_at),
+        feedback: item.feedback === "like" ? "positive" : item.feedback === "dislike" ? "negative" : null,
+        feedbackMessage: item.feedback_comment || undefined,
+        reference: item.reference || undefined,
+      }))
+
+      setMessages(mappedMessages)
     }
 
     loadChatHistory()
@@ -98,6 +95,45 @@ export default function ChatPage() {
       }, 100)
     }
   }, [messages])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (textareaRef.current && documentCount > 0) {
+        textareaRef.current.focus()
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [documentCount, messages.length])
+
+  useEffect(() => {
+    if (!isLoading && textareaRef.current && documentCount > 0) {
+      textareaRef.current.focus()
+    }
+  }, [isLoading, documentCount])
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isInputElement = target.tagName === "INPUT" || target.tagName === "TEXTAREA"
+
+      if (feedbackDialog.isOpen) return
+
+      if (target === textareaRef.current) return
+
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
+      if (e.key.length > 1 && e.key !== "Enter" && e.key !== "Backspace") return
+
+      if (isInputElement) return
+
+      if (textareaRef.current && documentCount > 0 && !isLoading) {
+        textareaRef.current.focus()
+      }
+    }
+
+    document.addEventListener("keydown", handleGlobalKeyDown)
+    return () => document.removeEventListener("keydown", handleGlobalKeyDown)
+  }, [documentCount, isLoading, feedbackDialog.isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,7 +179,6 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
-      textareaRef.current?.focus()
     }
   }
 
@@ -160,13 +195,13 @@ export default function ChatPage() {
   }
 
   const handleLogout = () => {
-    console.log("[v0] Logout clicked from navbar")
+    console.log("[v0] Logout clicked from sidebar")
     removeAuthToken()
     router.push("/login")
   }
 
   const handleSettings = () => {
-    console.log("[v0] Settings clicked from navbar, navigating to /settings")
+    console.log("[v0] Settings clicked from sidebar, navigating to /settings")
     router.push("/settings")
   }
 
@@ -200,6 +235,7 @@ export default function ChatPage() {
       toast({
         title: "Feedback poslat",
         description: "Hvala na povratnoj informaciji!",
+        variant: "success",
       })
     } catch (error) {
       console.error("Failed to send feedback:", error)
@@ -257,6 +293,7 @@ export default function ChatPage() {
       toast({
         title: "Feedback poslat",
         description: "Hvala na povratnoj informaciji!",
+        variant: "success",
       })
 
       setFeedbackDialog({ isOpen: false, messageId: null, type: null })
@@ -276,12 +313,40 @@ export default function ChatPage() {
     setFeedbackText("")
   }
 
+  const handleDocumentsChange = (count: number) => {
+    setDocumentCount(count)
+  }
+
+  const handleUploadTrigger = useCallback((triggerFn: () => void) => {
+    setTriggerUpload(() => triggerFn)
+  }, [])
+
+  const handleCopyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      toast({
+        title: "Uspješno kopirano!",
+        variant: "success",
+      })
+    } catch (error) {
+      console.error("Failed to copy message:", error)
+      toast({
+        title: "Greška",
+        description: "Nije moguće kopirati poruku. Pokušajte ponovo.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const lastAssistantMessage = messages
     .filter((msg) => msg.role === "assistant")
     .reverse()
     .find((msg) => msg.reference && msg.reference.length > 0)
 
   const currentReferences = lastAssistantMessage?.reference || []
+
+  const hasDocuments = documentCount > 0
+  const inputPlaceholder = hasDocuments ? "Postavi pitanje..." : "Prvo učitaj dokument..."
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -290,46 +355,36 @@ export default function ChatPage() {
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onNewChat={handleNewChat}
         references={currentReferences}
+        onDocumentsChange={handleDocumentsChange}
+        onUploadTrigger={handleUploadTrigger}
+        onLogout={handleLogout}
+        onSettings={handleSettings}
       />
 
       <div className="flex flex-1 flex-col h-full overflow-hidden">
-        {/* Header */}
-        <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold">Chat Asistent</h1>
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    <User className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleSettings} className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                Postavke korisnika
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                <LogOut className="mr-2 h-4 w-4" />
-                Odjavi se
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto" ref={scrollRef}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollRef}>
           <div className="mx-auto max-w-3xl px-4 py-6">
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <div className="text-center space-y-4">
-                  <h2 className="text-3xl font-semibold text-balance">Kako mogu da ti pomognem danas?</h2>
-                  <p className="text-muted-foreground">Započni razgovor upisivanjem poruke ispod</p>
+                <div className="text-center space-y-6 max-w-md">
+                  <h1 className="text-5xl font-bold text-balance">Dobar Dan 👋</h1>
+                  <div className="space-y-3">
+                    <p className="text-base text-muted-foreground text-balance">
+                      Dodajte dokument kako biste mogli postavljati pitanja i dobiti odgovore zasnovane na sadržaju
+                      vašeg dokumenta.
+                    </p>
+                  </div>
+                  <div className="pt-4">
+                    <Button
+                      size="lg"
+                      className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                      onClick={() => triggerUpload?.()}
+                    >
+                      <Upload className="h-5 w-5" />
+                      Dodaj dokument
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -354,36 +409,46 @@ export default function ChatPage() {
                         <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                       </div>
                       {message.role === "assistant" && (
-                        <div className="flex items-center gap-2 px-2">
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-7 w-7",
+                                message.feedback === "positive" && "text-green-600 hover:text-green-600",
+                              )}
+                              onClick={() => handleFeedback(message.id, "like")}
+                            >
+                              <ThumbsUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-7 w-7",
+                                message.feedback === "negative" && "text-red-600 hover:text-red-600",
+                              )}
+                              onClick={() => handleFeedback(message.id, "dislike")}
+                            >
+                              <ThumbsDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn("h-7 w-7", message.feedbackMessage && "text-blue-600 hover:text-blue-600")}
+                              onClick={() => handleCommentFeedback(message.id)}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                          </div>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className={cn(
-                              "h-7 w-7",
-                              message.feedback === "positive" && "text-green-600 hover:text-green-600",
-                            )}
-                            onClick={() => handleFeedback(message.id, "like")}
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleCopyMessage(message.content)}
                           >
-                            <ThumbsUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                              "h-7 w-7",
-                              message.feedback === "negative" && "text-red-600 hover:text-red-600",
-                            )}
-                            onClick={() => handleFeedback(message.id, "dislike")}
-                          >
-                            <ThumbsDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn("h-7 w-7", message.feedbackMessage && "text-blue-600 hover:text-blue-600")}
-                            onClick={() => handleCommentFeedback(message.id)}
-                          >
-                            <MessageSquare className="h-4 w-4" />
+                            Kopiraj
                           </Button>
                         </div>
                       )}
@@ -423,22 +488,22 @@ export default function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Poruka..."
+                placeholder={inputPlaceholder}
                 className="min-h-[52px] max-h-[200px] resize-none pr-12"
                 rows={1}
-                disabled={isLoading}
+                disabled={isLoading || !hasDocuments}
               />
               <Button
                 type="submit"
                 size="icon"
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || !hasDocuments}
                 className="absolute bottom-2 right-2 h-8 w-8"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
             <p className="mt-2 text-xs text-center text-muted-foreground">
-              AI može praviti greške. Provjerite važne informacije.
+              Odgovori mogu biti pogrešni. Provjeri važne informacije!
             </p>
           </form>
         </div>

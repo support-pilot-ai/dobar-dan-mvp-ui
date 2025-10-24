@@ -41,8 +41,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-balance">Dobrodošli nazad</CardTitle>
-          <CardDescription>Unesite svoje podatke za pristup nalogu</CardDescription>
+          <CardTitle className="text-2xl font-bold text-balance">Dobar Dan!</CardTitle>
+          <CardDescription>Prijavi se na svoj nalog</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -56,7 +56,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="vas@primjer.com"
+                placeholder="tvoj@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -64,11 +64,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Lozinka</Label>
+              <Label htmlFor="password">Šifra</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Unesite vašu lozinku"
+                placeholder="Unesite šifru"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -81,9 +81,9 @@ export default function LoginPage() {
               {isLoading ? "Prijavljivanje..." : "Prijavi se"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              {"Nemate nalog? "}
+              {"Novi si ovdje? "}
               <Link href="/register" className="text-primary hover:underline">
-                Registruj se
+                Kreiraj nalog
               </Link>
             </p>
           </CardFooter>
