@@ -11,12 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { registerUser } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2 } from "lucide-react"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
@@ -33,12 +31,6 @@ export default function RegisterPage() {
       const formData = { email, password, name: fullName }
       await registerUser(formData)
       setIsSuccess(true)
-      toast({
-        title: "Račun kreiran!",
-        description: `Poslali smo ti email na ${email}. Provjeri email i potvrdi račun da bi se prijavio. (Nemoj zaboraviti pogledati i spam!)`,
-        duration: 10000,
-        variant: "success"
-      })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
     } finally {
