@@ -121,7 +121,7 @@ export default function RegisterPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Kreirajte šifru"
+                placeholder="Kreiraj šifru"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -135,7 +135,7 @@ export default function RegisterPage() {
               {isLoading ? "Kreiranje naloga..." : "Kreiraj nalog"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              Već imate nalog?{" "}
+              Već imaš nalog?{" "}
               <Link href="/login" className="text-primary hover:underline">
                 Prijavi se
               </Link>

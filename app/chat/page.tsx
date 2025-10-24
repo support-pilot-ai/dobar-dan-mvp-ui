@@ -396,7 +396,7 @@ export default function ChatPage() {
                   >
                     {message.role === "assistant" && (
                       <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback>
+                        <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
                       </Avatar>
                     )}
                     <div className="flex flex-col gap-2 max-w-[80%]">
@@ -463,7 +463,7 @@ export default function ChatPage() {
                 {isLoading && (
                   <div className="flex gap-4">
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback>
+                      <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
                     </Avatar>
                     <div className="rounded-2xl bg-muted px-4 py-3">
                       <div className="flex gap-1">

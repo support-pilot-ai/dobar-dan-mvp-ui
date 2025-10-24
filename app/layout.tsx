@@ -11,7 +11,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Chat Application",
+  title: "Dobar Dan",
   description: "AI-powered chat application",
   generator: "v0.app",
 }

@@ -68,7 +68,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Unesite šifru"
+                placeholder="Unesi šifru"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
