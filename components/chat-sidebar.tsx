@@ -130,31 +130,49 @@ export function ChatSidebar({
   }, [onUploadTrigger, handleUploadDocument])
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const files = event.target.files
+    if (!files || files.length === 0) return
 
     const allowedTypes = [
       "application/pdf",
       "text/plain", // .txt files
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx files
     ]
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Greška",
-        description: "Molimo učitajte PDF, TXT ili DOCX fajl.",
-        variant: "destructive",
-      })
-      return
-    }
 
     const maxSize = 10 * 1024 * 1024 // 10MB
-    if (file.size > maxSize) {
+    const validFiles: File[] = []
+    const errors: string[] = []
+
+    // Validate each file
+    Array.from(files).forEach((file) => {
+      if (!allowedTypes.includes(file.type)) {
+        errors.push(`${file.name}: Nepodržan format. Molimo učitajte PDF, TXT ili DOCX fajl.`)
+      } else if (file.size > maxSize) {
+        errors.push(`${file.name}: Fajl je prevelik. Maksimalna veličina je 10MB.`)
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    // Show validation errors if any
+    if (errors.length > 0) {
       toast({
         title: "Greška",
-        description: "Fajl je prevelik. Maksimalna veličina je 10MB.",
+        description: (
+          <div className="space-y-1">
+            {errors.map((error, index) => (
+              <div key={index}>{error}</div>
+            ))}
+          </div>
+        ),
         variant: "destructive",
       })
-      return
+      if (validFiles.length === 0) {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""
+        }
+        return
+      }
     }
 
     setIsUploading(true)
@@ -164,19 +182,29 @@ export function ChatSidebar({
         throw new Error("Niste prijavljeni")
       }
 
-      const uploadedDoc = await uploadDocument(token, file)
+      const uploadedDocs = await uploadDocument(token, validFiles)
 
-      setDocuments((prev) => [uploadedDoc, ...prev])
+      setDocuments((prev) => [...uploadedDocs, ...prev])
 
+      const fileNames = uploadedDocs.map((doc) => doc.filename).join(", ")
       toast({
         title: "Uspješno",
-        description: `Dokument "${file.name}" je uspješno učitan.`,
+        description: `${uploadedDocs.length} dokument${uploadedDocs.length > 1 ? "a" : ""} uspješno učitan${uploadedDocs.length > 1 ? "o" : ""}: ${fileNames}`,
         variant: "success",
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Nije moguće učitati dokumente."
+      const errorLines = errorMessage.split("\n").filter((line) => line.trim() !== "")
+
       toast({
         title: "Greška",
-        description: error instanceof Error ? error.message : "Nije moguće učitati dokument.",
+        description: (
+          <div className="space-y-1">
+            {errorLines.map((line, index) => (
+              <div key={index}>{line}</div>
+            ))}
+          </div>
+        ),
         variant: "destructive",
       })
     } finally {
@@ -282,14 +310,15 @@ export function ChatSidebar({
                     accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     onChange={handleFileChange}
                     className="hidden"
+                    multiple
                   />
                   <Button
                     variant="outline"
                     className={cn(
                       "w-full justify-start gap-2 transition-all duration-200",
                       isUploading
-                      ? "bg-[#ffcf53] text-white border-[#ffcf53] hover:bg-[#ffcf53]/90 animate-pulse cursor-not-allowed"
-                      : "bg-[#ffcf53] text-white border-[#ffcf53] hover:bg-[#ffcf53]/90 hover:text-white",
+                        ? "bg-[#ffcf53] text-white border-[#ffcf53] hover:bg-[#ffcf53]/90 animate-pulse cursor-not-allowed"
+                        : "bg-[#ffcf53] text-white border-[#ffcf53] hover:bg-[#ffcf53]/90 hover:text-white",
                     )}
                     onClick={handleUploadDocument}
                     disabled={isUploading}
@@ -416,6 +445,7 @@ export function ChatSidebar({
         </Tabs>
       </TooltipProvider>
 
+      <Separator />
       <div className="p-2">
         {!isCollapsed ? (
           <DropdownMenu>
@@ -427,7 +457,7 @@ export function ChatSidebar({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start flex-1 min-w-0 gap-1">
-                {isLoadingProfile ? (
+                  {isLoadingProfile ? (
                     <Skeleton className="h-4 w-24 bg-gray-200" />
                   ) : (
                     <span className="text-sm font-medium">{userName}</span>

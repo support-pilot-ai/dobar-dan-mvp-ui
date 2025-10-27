@@ -176,24 +176,13 @@ export async function getChatSessions(token: string): Promise<ChatSession[]> {
 }
 
 // Document APIs
-export async function getDocuments(token: string): Promise<Document[]> {
-  const response = await fetch(`${API_BASE_URL}/api/documents`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to load documents")
-  }
-
-  return response.json()
-}
-
-export async function uploadDocument(token: string, file: File): Promise<Document> {
+export async function uploadDocument(token: string, files: File[]): Promise<Document[]> {
   const formData = new FormData()
-  formData.append("file", file)
+
+  // Add each file to FormData with the key 'files'
+  files.forEach((file) => {
+    formData.append("files", file)
+  })
 
   const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
     method: "POST",
@@ -207,16 +196,37 @@ export async function uploadDocument(token: string, file: File): Promise<Documen
     if (response.status >= 400 && response.status < 500) {
       try {
         const error = await response.json()
-        const errorMessage = error.detail || "Nije moguće učitati dokument."
+        if (error.detail && error.detail.errors) {
+          const errorMessages = error.detail.errors
+            .map((err: { error: string; filename: string }) => err.error)
+            .join("\n")
+          throw new Error(errorMessages || error.detail.message || "Nije moguće učitati dokumente.")
+        }
+        const errorMessage = error.detail || "Nije moguće učitati dokumente."
         throw new Error(errorMessage)
       } catch (parseError) {
-        if (parseError instanceof Error && parseError.message !== "Nije moguće učitati dokument.") {
+        if (parseError instanceof Error && parseError.message !== "Nije moguće učitati dokumente.") {
           throw parseError
         }
-        throw new Error("Nije moguće učitati dokument.")
+        throw new Error("Nije moguće učitati dokumente.")
       }
     }
-    throw new Error("Nije moguće učitati dokument.")
+    throw new Error("Nije moguće učitati dokumente.")
+  }
+
+  return response.json()
+}
+
+export async function getDocuments(token: string): Promise<Document[]> {
+  const response = await fetch(`${API_BASE_URL}/api/documents`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to load documents")
   }
 
   return response.json()
