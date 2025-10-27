@@ -288,8 +288,8 @@ export function ChatSidebar({
                     className={cn(
                       "w-full justify-start gap-2 transition-all duration-200",
                       isUploading
-                        ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600 animate-pulse cursor-not-allowed"
-                        : "bg-orange-500 text-white border-orange-500 hover:bg-orange-400 hover:text-white",
+                      ? "bg-[#ffcf53] text-white border-[#ffcf53] hover:bg-[#ffcf53]/90 animate-pulse cursor-not-allowed"
+                      : "bg-[#ffcf53] text-white border-[#ffcf53] hover:bg-[#ffcf53]/90 hover:text-white",
                     )}
                     onClick={handleUploadDocument}
                     disabled={isUploading}
@@ -416,7 +416,6 @@ export function ChatSidebar({
         </Tabs>
       </TooltipProvider>
 
-      <Separator />
       <div className="p-2">
         {!isCollapsed ? (
           <DropdownMenu>

@@ -397,16 +397,22 @@ export default function ChatPage() {
               <div className="flex h-full items-center justify-center">
                 <div className="text-center space-y-6 max-w-md">
                   <h1 className="text-5xl font-bold text-balance">Dobar Dan 👋</h1>
-                  <div className="space-y-3">
-                    <p className="text-base text-muted-foreground text-balance">
-                      Dodajte dokument kako biste mogli postavljati pitanja i dobiti odgovore zasnovane na sadržaju
-                      vašeg dokumenta.
-                    </p>
+                  <div className="space-y-4 text-left">
+                    <p className="text-lg font-medium text-foreground">Evo kako početi:</p>
+                    <div className="space-y-3">
+                      <p className="text-base font-semibold text-foreground">Koraci:</p>
+                      <ol className="space-y-2 text-base text-muted-foreground list-decimal list-inside">
+                        <li>Dodaj jedan ili više dokumenata (PDF, Word, TXT)</li>
+                        <li>Sačekaj par sekundi da se obradi</li>
+                        <li>Postavi pitanje vezano za dokument</li>
+                        <li>Dobij odgovor sa izvorima</li>
+                      </ol>
+                    </div>
                   </div>
                   <div className="pt-4">
                     <Button
                       size="lg"
-                      className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                      className="bg-[#ffcf53] hover:bg-[#ffcf53]/90 text-white gap-2"
                       onClick={() => triggerUpload?.()}
                     >
                       <Upload className="h-5 w-5" />
