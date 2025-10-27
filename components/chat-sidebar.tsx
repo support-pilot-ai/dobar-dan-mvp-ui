@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/auth"
-import { getDocuments, uploadDocument, deleteDocument } from "@/lib/api"
+import { getDocuments, uploadDocument, deleteDocument, getUserProfile } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -88,29 +88,36 @@ export function ChatSidebar({
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [userName, setUserName] = useState<string>("Korisnik")
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingDocs(true)
+      setIsLoadingProfile(true)
       try {
         const token = getAuthToken()
         if (token) {
           const docData = await getDocuments(token)
           setDocuments(docData)
+
+          try {
+            const profile = await getUserProfile(token)
+            setUserName(profile.name)
+          } catch (error) {
+            console.error("Failed to load user profile:", error)
+          }
         }
       } catch (error) {
         setDocuments([])
       } finally {
         setIsLoadingDocs(false)
+        setIsLoadingProfile(false)
       }
     }
 
     loadData()
   }, [])
-
-  useEffect(() => {
-    onDocumentsChange?.(documents.length)
-  }, [documents.length, onDocumentsChange])
 
   const handleUploadDocument = useCallback(() => {
     fileInputRef.current?.click()
@@ -140,7 +147,6 @@ export function ChatSidebar({
       return
     }
 
-    // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024 // 10MB
     if (file.size > maxSize) {
       toast({
@@ -222,7 +228,7 @@ export function ChatSidebar({
   const handleTabClick = (tab: string) => {
     setActiveTab(tab)
     if (isCollapsed) {
-      onToggle() // Expand sidebar when clicking on icon in collapsed state
+      onToggle()
     }
   }
 
@@ -422,7 +428,11 @@ export function ChatSidebar({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start flex-1 min-w-0 gap-1">
-                  <span className="text-sm font-medium">Korisnik</span>
+                {isLoadingProfile ? (
+                    <Skeleton className="h-4 w-24 bg-gray-200" />
+                  ) : (
+                    <span className="text-sm font-medium">{userName}</span>
+                  )}
                   <span className="text-xs text-muted-foreground">Besplatna verzija</span>
                 </div>
               </Button>

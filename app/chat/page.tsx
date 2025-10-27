@@ -7,10 +7,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Send, ThumbsDown, ThumbsUp, MessageSquare, Upload } from "lucide-react"
 import { isAuthenticated, getAuthToken, removeAuthToken } from "@/lib/auth"
-import { sendMessage, sendFeedback, getChatHistory } from "@/lib/api"
+import { sendMessage, sendFeedback, getChatHistory, getUserProfile } from "@/lib/api"
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -36,9 +37,11 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [documentCount, setDocumentCount] = useState(0)
   const [triggerUpload, setTriggerUpload] = useState<(() => void) | null>(null)
+  const [userInitials, setUserInitials] = useState("Ti")
   const [feedbackDialog, setFeedbackDialog] = useState<{
     isOpen: boolean
     messageId: string | null
@@ -52,13 +55,36 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const getInitials = (name: string): string => {
+    const parts = name.trim().split(" ")
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return parts[0]?.substring(0, 2).toUpperCase() || "Ti"
+  }
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push("/login")
       return
     }
 
+    const loadUserProfile = async () => {
+      const token = getAuthToken()
+      if (!token) return
+
+      try {
+        const profile = await getUserProfile(token)
+        if (profile.name) {
+          setUserInitials(getInitials(profile.name))
+        }
+      } catch (error) {
+        console.error("Failed to load user profile:", error)
+      }
+    }
+
     const loadChatHistory = async () => {
+      setIsLoadingHistory(true)
       const token = getAuthToken()
       if (!token) {
         router.push("/login")
@@ -78,8 +104,10 @@ export default function ChatPage() {
       }))
 
       setMessages(mappedMessages)
+      setIsLoadingHistory(false)
     }
 
+    loadUserProfile()
     loadChatHistory()
   }, [router])
 
@@ -365,7 +393,7 @@ export default function ChatPage() {
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollRef}>
           <div className="mx-auto max-w-3xl px-4 py-6">
-            {messages.length === 0 ? (
+            {messages.length === 0 && !isLoadingHistory ? (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center space-y-6 max-w-md">
                   <h1 className="text-5xl font-bold text-balance">Dobar Dan 👋</h1>
@@ -389,90 +417,137 @@ export default function ChatPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn("flex gap-4", message.role === "user" ? "justify-end" : "justify-start")}
-                  >
-                    {message.role === "assistant" && (
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className="flex flex-col gap-2 max-w-[80%]">
-                      <div
-                        className={cn(
-                          "rounded-2xl px-4 py-3",
-                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                      </div>
-                      {message.role === "assistant" && (
-                        <div className="flex items-center justify-between px-2">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={cn(
-                                "h-7 w-7",
-                                message.feedback === "positive" && "text-green-600 hover:text-green-600",
-                              )}
-                              onClick={() => handleFeedback(message.id, "like")}
-                            >
-                              <ThumbsUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={cn(
-                                "h-7 w-7",
-                                message.feedback === "negative" && "text-red-600 hover:text-red-600",
-                              )}
-                              onClick={() => handleFeedback(message.id, "dislike")}
-                            >
-                              <ThumbsDown className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={cn("h-7 w-7", message.feedbackMessage && "text-blue-600 hover:text-blue-600")}
-                              onClick={() => handleCommentFeedback(message.id)}
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => handleCopyMessage(message.content)}
-                          >
-                            Kopiraj
-                          </Button>
+                {isLoadingHistory ? (
+                  <>
+                    {/* First skeleton - User message (right side) */}
+                    <div className="flex gap-4 justify-end">
+                      <div className="flex flex-col gap-2 max-w-[80%]">
+                        <div className="rounded-2xl bg-primary/10 px-4 py-3">
+                          <Skeleton className="h-4 w-[250px]" />
+                          <Skeleton className="h-4 w-[200px] mt-2" />
                         </div>
-                      )}
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
                     </div>
-                    {message.role === "user" && (
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-secondary text-secondary-foreground">Ti</AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-4">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
-                    </Avatar>
-                    <div className="rounded-2xl bg-muted px-4 py-3">
-                      <div className="flex gap-1">
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-foreground [animation-delay:-0.3s]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-foreground [animation-delay:-0.15s]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-foreground" />
+
+                    {/* Second skeleton - AI message (left side) */}
+                    <div className="flex gap-4 justify-start">
+                      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                      <div className="flex flex-col gap-2 max-w-[80%]">
+                        <div className="rounded-2xl bg-muted px-4 py-3">
+                          <Skeleton className="h-4 w-[300px]" />
+                          <Skeleton className="h-4 w-[280px] mt-2" />
+                          <Skeleton className="h-4 w-[250px] mt-2" />
+                        </div>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Third skeleton - User message (right side) */}
+                    <div className="flex gap-4 justify-end">
+                      <div className="flex flex-col gap-2 max-w-[80%]">
+                        <div className="rounded-2xl bg-primary/10 px-4 py-3">
+                          <Skeleton className="h-4 w-[220px]" />
+                          <Skeleton className="h-4 w-[180px] mt-2" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={cn("flex gap-4", message.role === "user" ? "justify-end" : "justify-start")}
+                      >
+                        {message.role === "assistant" && (
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className="flex flex-col gap-2 max-w-[80%]">
+                          <div
+                            className={cn(
+                              "rounded-2xl px-4 py-3",
+                              message.role === "user"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground",
+                            )}
+                          >
+                            <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                          </div>
+                          {message.role === "assistant" && (
+                            <div className="flex items-center justify-between px-2">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn(
+                                    "h-7 w-7",
+                                    message.feedback === "positive" && "text-green-600 hover:text-green-600",
+                                  )}
+                                  onClick={() => handleFeedback(message.id, "like")}
+                                >
+                                  <ThumbsUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn(
+                                    "h-7 w-7",
+                                    message.feedback === "negative" && "text-red-600 hover:text-red-600",
+                                  )}
+                                  onClick={() => handleFeedback(message.id, "dislike")}
+                                >
+                                  <ThumbsDown className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn(
+                                    "h-7 w-7",
+                                    message.feedbackMessage && "text-blue-600 hover:text-blue-600",
+                                  )}
+                                  onClick={() => handleCommentFeedback(message.id)}
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => handleCopyMessage(message.content)}
+                              >
+                                Kopiraj
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {message.role === "user" && (
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarFallback className="bg-secondary text-secondary-foreground">
+                              {userInitials}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex gap-4">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
+                        </Avatar>
+                        <div className="rounded-2xl bg-muted px-4 py-3">
+                          <div className="flex gap-1">
+                            <span className="h-2 w-2 animate-bounce rounded-full bg-foreground [animation-delay:-0.3s]" />
+                            <span className="h-2 w-2 animate-bounce rounded-full bg-foreground [animation-delay:-0.15s]" />
+                            <span className="h-2 w-2 animate-bounce rounded-full bg-foreground" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
