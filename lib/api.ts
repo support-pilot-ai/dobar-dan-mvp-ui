@@ -265,7 +265,7 @@ export async function getUserProfile(token: string): Promise<UserProfile> {
 }
 
 export async function updateUserProfile(token: string, data: { name: string }): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

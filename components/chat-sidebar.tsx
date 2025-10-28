@@ -1,6 +1,23 @@
 "use client"
 
+import { AlertDialogAction } from "@/components/ui/alert-dialog"
+
+import { AlertDialogCancel } from "@/components/ui/alert-dialog"
+
+import { AlertDialogFooter } from "@/components/ui/alert-dialog"
+
+import { AlertDialogDescription } from "@/components/ui/alert-dialog"
+
+import { AlertDialogTitle } from "@/components/ui/alert-dialog"
+
+import { AlertDialogHeader } from "@/components/ui/alert-dialog"
+
+import { AlertDialogContent } from "@/components/ui/alert-dialog"
+
+import { AlertDialog } from "@/components/ui/alert-dialog"
+
 import type React from "react"
+import { useToast } from "@/components/ui/use-toast" // Import useToast hook
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
@@ -27,17 +44,6 @@ import {
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/auth"
 import { getDocuments, uploadDocument, deleteDocument, getUserProfile } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 
 interface Document {
   id: string
@@ -79,7 +85,7 @@ export function ChatSidebar({
   onUploadTrigger,
 }: ChatSidebarProps) {
   const router = useRouter()
-  const { toast } = useToast()
+  const { toast } = useToast() // Declare useToast hook
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [activeTab, setActiveTab] = useState("docs")
@@ -264,6 +270,12 @@ export function ChatSidebar({
     if (filename.length <= maxLength) return filename
     return filename.substring(0, maxLength) + "..."
   }
+
+  useEffect(() => {
+    if (onDocumentsChange) {
+      onDocumentsChange(documents.length)
+    }
+  }, [documents.length, onDocumentsChange])
 
   return (
     <aside

@@ -91,7 +91,7 @@ export default function ChatPage() {
         return
       }
 
-      const history = await getChatHistory(token, 5)
+      const history = await getChatHistory(token, 6)
 
       const mappedMessages: Message[] = history.map((item) => ({
         id: item.id,

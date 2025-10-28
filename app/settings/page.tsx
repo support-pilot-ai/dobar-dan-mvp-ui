@@ -8,21 +8,20 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, User, Shield } from "lucide-react"
 import { isAuthenticated, getAuthToken } from "@/lib/auth"
 import { getUserProfile, updateUserProfile, changePassword } from "@/lib/api"
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState<"success" | "error">("success")
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -40,17 +39,19 @@ export default function SettingsPage() {
         }
       } catch (error) {
         console.error("Failed to load profile:", error)
-        setMessage("Greška pri učitavanju profila")
-        setMessageType("error")
+        toast({
+          title: "Greška",
+          description: "Greška pri učitavanju profila",
+          variant: "destructive",
+        })
       }
     }
 
     loadProfile()
-  }, [router])
+  }, [router, toast])
 
   const handleSaveProfile = async () => {
     setIsLoading(true)
-    setMessage("")
 
     try {
       const token = getAuthToken()
@@ -60,11 +61,17 @@ export default function SettingsPage() {
       }
 
       await updateUserProfile(token, { name })
-      setMessage("Profil uspješno ažuriran")
-      setMessageType("success")
+      toast({
+        title: "Uspjeh",
+        description: "Profil uspješno ažuriran",
+        variant: "success"
+      })
     } catch (error) {
-      setMessage("Greška pri ažuriranju profila")
-      setMessageType("error")
+      toast({
+        title: "Greška",
+        description: "Greška pri ažuriranju profila",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -72,13 +79,15 @@ export default function SettingsPage() {
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      setMessage("Lozinke se ne podudaraju")
-      setMessageType("error")
+      toast({
+        title: "Greška",
+        description: "Lozinke se ne podudaraju",
+        variant: "destructive",
+      })
       return
     }
 
     setIsLoading(true)
-    setMessage("")
 
     try {
       const token = getAuthToken()
@@ -88,14 +97,20 @@ export default function SettingsPage() {
       }
 
       await changePassword(token, newPassword)
-      setMessage("Lozinka uspješno promijenjena")
-      setMessageType("success")
+      toast({
+        title: "Uspjeh",
+        description: "Lozinka uspješno promijenjena",
+        variant: "success"
+      })
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
     } catch (error) {
-      setMessage("Greška pri promjeni lozinke")
-      setMessageType("error")
+      toast({
+        title: "Greška",
+        description: "Greška pri promjeni lozinke",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -115,12 +130,6 @@ export default function SettingsPage() {
 
       {/* Content */}
       <div className="container mx-auto max-w-4xl px-4 py-8">
-        {message && (
-          <Alert variant={messageType === "error" ? "destructive" : "default"} className="mb-6">
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
-
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="profile">
@@ -163,7 +172,7 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Promjena lozinke</CardTitle>
-                <CardDescription>Ažurirajte svoju lozinku da bi vaš račun bio siguran</CardDescription>
+                <CardDescription>Ažurirajte svoju lozinku da bi vaš nalog bio siguran</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
