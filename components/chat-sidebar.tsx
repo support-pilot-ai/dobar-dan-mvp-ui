@@ -17,7 +17,7 @@ import { AlertDialogContent } from "@/components/ui/alert-dialog"
 import { AlertDialog } from "@/components/ui/alert-dialog"
 
 import type React from "react"
-import { useToast } from "@/components/ui/use-toast" // Import useToast hook
+import { useToast } from "@/components/ui/use-toast"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
@@ -85,7 +85,7 @@ export function ChatSidebar({
   onUploadTrigger,
 }: ChatSidebarProps) {
   const router = useRouter()
-  const { toast } = useToast() // Declare useToast hook
+  const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [activeTab, setActiveTab] = useState("docs")

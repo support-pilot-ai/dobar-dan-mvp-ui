@@ -14,7 +14,7 @@ import { isAuthenticated, getAuthToken, removeAuthToken } from "@/lib/auth"
 import { sendMessage, sendFeedback, getChatHistory, getUserProfile } from "@/lib/api"
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { cn } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 interface Message {
   id: string
