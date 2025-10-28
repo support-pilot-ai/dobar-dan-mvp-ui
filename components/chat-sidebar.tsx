@@ -339,7 +339,7 @@ export function ChatSidebar({
                     {isUploading ? "Učitavanje..." : "Dodaj dokument"}
                   </Button>
                 </div>
-                <ScrollArea className="h-full px-2">
+                <ScrollArea className="h-[calc(100vh-280px)] px-2">
                   <div className="space-y-1 py-2">
                     {isLoadingDocs ? (
                       <>
