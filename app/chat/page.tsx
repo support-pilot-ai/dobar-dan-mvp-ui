@@ -467,7 +467,7 @@ export default function ChatPage() {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={cn("flex gap-4", message.role === "user" ? "justify-end" : "justify-start")}
+                        className={cn("flex gap-4 mb-6", message.role === "user" ? "justify-end" : "justify-start")}
                       >
                         {message.role === "assistant" && (
                           <Avatar className="h-8 w-8 shrink-0">
@@ -543,7 +543,7 @@ export default function ChatPage() {
                       </div>
                     ))}
                     {isLoading && (
-                      <div className="flex gap-4">
+                      <div className="flex gap-4 mb-6">
                         <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="bg-primary text-primary-foreground">DD</AvatarFallback>
                         </Avatar>
