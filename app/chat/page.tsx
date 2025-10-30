@@ -42,6 +42,7 @@ export default function ChatPage() {
   const [documentCount, setDocumentCount] = useState(0)
   const [triggerUpload, setTriggerUpload] = useState<(() => void) | null>(null)
   const [userInitials, setUserInitials] = useState("Ti")
+  const [userName, setUserName] = useState("")
   const [feedbackDialog, setFeedbackDialog] = useState<{
     isOpen: boolean
     messageId: string | null
@@ -77,6 +78,7 @@ export default function ChatPage() {
         const profile = await getUserProfile(token)
         if (profile.name) {
           setUserInitials(getInitials(profile.name))
+          setUserName(profile.name)
         }
       } catch (error) {
         console.error("Failed to load user profile:", error)
@@ -387,6 +389,7 @@ export default function ChatPage() {
         onUploadTrigger={handleUploadTrigger}
         onLogout={handleLogout}
         onSettings={handleSettings}
+        userName={userName}
       />
 
       <div className="flex flex-1 flex-col h-full overflow-hidden">
@@ -422,7 +425,7 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
+              <>
                 {isLoadingHistory ? (
                   <>
                     {/* First skeleton - User message (right side) */}
@@ -555,7 +558,7 @@ export default function ChatPage() {
                     )}
                   </>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>

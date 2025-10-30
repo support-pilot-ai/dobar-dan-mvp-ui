@@ -1,24 +1,20 @@
 "use client"
 
-import { AlertDialogAction } from "@/components/ui/alert-dialog"
-
-import { AlertDialogCancel } from "@/components/ui/alert-dialog"
-
-import { AlertDialogFooter } from "@/components/ui/alert-dialog"
-
-import { AlertDialogDescription } from "@/components/ui/alert-dialog"
-
-import { AlertDialogTitle } from "@/components/ui/alert-dialog"
-
-import { AlertDialogHeader } from "@/components/ui/alert-dialog"
-
 import { AlertDialogContent } from "@/components/ui/alert-dialog"
 
-import { AlertDialog } from "@/components/ui/alert-dialog"
-
+import {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
 import type React from "react"
 import { useToast } from "@/components/ui/use-toast"
-
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -43,7 +39,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/auth"
-import { getDocuments, uploadDocument, deleteDocument, getUserProfile } from "@/lib/api"
+import { getDocuments, uploadDocument, deleteDocument } from "@/lib/api"
 
 interface Document {
   id: string
@@ -72,6 +68,7 @@ interface ChatSidebarProps {
   onLogout: () => void
   onSettings: () => void
   onUploadTrigger?: (triggerFn: () => void) => void
+  userName?: string
 }
 
 export function ChatSidebar({
@@ -83,6 +80,7 @@ export function ChatSidebar({
   onLogout,
   onSettings,
   onUploadTrigger,
+  userName = "Korisnik",
 }: ChatSidebarProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -94,31 +92,20 @@ export function ChatSidebar({
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null)
-  const [userName, setUserName] = useState<string>("Korisnik")
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingDocs(true)
-      setIsLoadingProfile(true)
       try {
         const token = getAuthToken()
         if (token) {
           const docData = await getDocuments(token)
           setDocuments(docData)
-
-          try {
-            const profile = await getUserProfile(token)
-            setUserName(profile.name)
-          } catch (error) {
-            console.error("Failed to load user profile:", error)
-          }
         }
       } catch (error) {
         setDocuments([])
       } finally {
         setIsLoadingDocs(false)
-        setIsLoadingProfile(false)
       }
     }
 
@@ -141,15 +128,14 @@ export function ChatSidebar({
 
     const allowedTypes = [
       "application/pdf",
-      "text/plain", // .txt files
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx files
+      "text/plain",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ]
 
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    const maxSize = 10 * 1024 * 1024
     const validFiles: File[] = []
     const errors: string[] = []
 
-    // Validate each file
     Array.from(files).forEach((file) => {
       if (!allowedTypes.includes(file.type)) {
         errors.push(`${file.name}: Nepodržan format. Molimo učitajte PDF, TXT ili DOCX fajl.`)
@@ -160,8 +146,8 @@ export function ChatSidebar({
       }
     })
 
-    // Show validation errors if any
     if (errors.length > 0) {
+      console.log("[v0] Showing validation error toast")
       toast({
         title: "Greška",
         description: (
@@ -193,6 +179,7 @@ export function ChatSidebar({
       setDocuments((prev) => [...uploadedDocs, ...prev])
 
       const fileNames = uploadedDocs.map((doc) => doc.filename).join(", ")
+      console.log("[v0] Showing upload success toast for:", fileNames)
       toast({
         title: "Uspješno",
         description: `${uploadedDocs.length} dokument${uploadedDocs.length > 1 ? "a" : ""} uspješno učitan${uploadedDocs.length > 1 ? "o" : ""}: ${fileNames}`,
@@ -202,6 +189,7 @@ export function ChatSidebar({
       const errorMessage = error instanceof Error ? error.message : "Nije moguće učitati dokumente."
       const errorLines = errorMessage.split("\n").filter((line) => line.trim() !== "")
 
+      console.log("[v0] Showing upload error toast:", errorMessage)
       toast({
         title: "Greška",
         description: (
@@ -241,12 +229,14 @@ export function ChatSidebar({
 
       setDocuments((prev) => prev.filter((doc) => doc.id !== docToDelete.id))
 
+      console.log("[v0] Showing delete success toast for:", docToDelete.name)
       toast({
         title: "Uspješno",
         description: `Dokument "${docToDelete.name}" je uspješno obrisan.`,
         variant: "success",
       })
     } catch (error) {
+      console.log("[v0] Showing delete error toast")
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Nije moguće obrisati dokument.",
@@ -469,11 +459,7 @@ export function ChatSidebar({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start flex-1 min-w-0 gap-1">
-                  {isLoadingProfile ? (
-                    <Skeleton className="h-4 w-24 bg-gray-200" />
-                  ) : (
-                    <span className="text-sm font-medium">{userName}</span>
-                  )}
+                  <span className="text-sm font-medium">{userName}</span>
                   <span className="text-xs text-muted-foreground">Besplatna verzija</span>
                 </div>
               </Button>
@@ -522,20 +508,23 @@ export function ChatSidebar({
       </div>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Obriši dokument</AlertDialogTitle>
-            <AlertDialogDescription>
-              Da li ste sigurni da želite da obrišete dokument "{docToDelete?.name}"? Ova akcija se ne može poništiti.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Otkaži</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-              Obriši
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        <AlertDialogPortal>
+          <AlertDialogOverlay />
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Obriši dokument</AlertDialogTitle>
+              <AlertDialogDescription>
+                Da li ste sigurni da želite da obrišete dokument "{docToDelete?.name}"? Ova akcija se ne može poništiti.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Otkaži</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+                Obriši
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogPortal>
       </AlertDialog>
     </aside>
   )
