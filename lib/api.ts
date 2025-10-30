@@ -14,7 +14,7 @@ export interface UserLogin {
 
 export interface AuthResponse {
   access_token: string
-  token_type: string
+  refresh_token?: string
   user: {
     id: string
     email: string
@@ -23,6 +23,7 @@ export interface AuthResponse {
     bio: string | null
     created_at: string
   }
+  message: string | null
 }
 
 export interface ChatMessage {
@@ -94,10 +95,8 @@ export async function registerUser(data: UserRegister): Promise<AuthResponse> {
 
   const result = await response.json()
 
-  // Backend returns only access_token, so we create a minimal user object
   return {
     access_token: result.access_token,
-    token_type: result.token_type || "bearer",
     user: {
       id: "user-" + Date.now(),
       email: data.email,
@@ -106,6 +105,7 @@ export async function registerUser(data: UserRegister): Promise<AuthResponse> {
       bio: null,
       created_at: new Date().toISOString(),
     },
+    message: result.message || null,
   }
 }
 
@@ -124,30 +124,15 @@ export async function loginUser(data: UserLogin): Promise<AuthResponse> {
     throw new Error(error.detail || "Login failed")
   }
 
-  const result = await response.json()
-
-  // Backend returns only access_token, so we create a minimal user object
-  return {
-    access_token: result.access_token,
-    token_type: result.token_type || "bearer",
-    user: {
-      id: "user-" + Date.now(),
-      email: data.email,
-      name: "User",
-      avatar_url: null,
-      bio: null,
-      created_at: new Date().toISOString(),
-    },
-  }
+  return response.json()
 }
 
 // Chat APIs
 export async function sendMessage(token: string, message: string): Promise<ChatMessageResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/chat/message`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ content: message }),
   })
@@ -161,11 +146,8 @@ export async function sendMessage(token: string, message: string): Promise<ChatM
 }
 
 export async function getChatSessions(token: string): Promise<ChatSession[]> {
-  const response = await fetch(`${API_BASE_URL}/chat/sessions`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/chat/sessions`, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   })
 
   if (!response.ok) {
@@ -184,11 +166,8 @@ export async function uploadDocument(token: string, files: File[]): Promise<Docu
     formData.append("files", file)
   })
 
-  const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/documents/upload`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: formData,
   })
 
@@ -218,10 +197,10 @@ export async function uploadDocument(token: string, files: File[]): Promise<Docu
 }
 
 export async function getDocuments(token: string): Promise<Document[]> {
-  const response = await fetch(`${API_BASE_URL}/api/documents`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/documents`, {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${token}`,
+      accept: "application/json",
     },
   })
 
@@ -233,10 +212,9 @@ export async function getDocuments(token: string): Promise<Document[]> {
 }
 
 export async function deleteDocument(token: string, documentId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/documents/${documentId}`, {
     method: "DELETE",
     headers: {
-      Authorization: `Bearer ${token}`,
       accept: "application/json",
     },
   })
@@ -249,10 +227,9 @@ export async function deleteDocument(token: string, documentId: string): Promise
 
 // User Profile APIs
 export async function getUserProfile(token: string): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/auth/me`, {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${token}`,
       accept: "application/json",
     },
   })
@@ -265,11 +242,10 @@ export async function getUserProfile(token: string): Promise<UserProfile> {
 }
 
 export async function updateUserProfile(token: string, data: { name: string }): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/auth/me`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       accept: "application/json",
     },
     body: JSON.stringify({ name: data.name }),
@@ -284,11 +260,10 @@ export async function updateUserProfile(token: string, data: { name: string }): 
 }
 
 export async function changePassword(token: string, newPassword: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/auth/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ new_password: newPassword }),
   })
@@ -307,11 +282,10 @@ export async function sendFeedback(
   messageId: string,
   data: { feedback: string | null; comment: string },
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/chat/${messageId}/feedback`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/chat/${messageId}/feedback`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       accept: "application/json",
     },
     body: JSON.stringify(data),
@@ -347,10 +321,9 @@ export interface ChatHistoryItem {
 }
 
 export async function getChatHistory(token: string, limit = 6): Promise<ChatHistoryItem[]> {
-  const response = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/chat/history?limit=${limit}`, {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${token}`,
       accept: "application/json",
     },
   })
@@ -360,4 +333,58 @@ export async function getChatHistory(token: string, limit = 6): Promise<ChatHist
   }
 
   return response.json()
+}
+
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const { getAuthToken, getRefreshToken, setAuthTokens, removeAuthToken } = await import("./auth")
+
+  const token = getAuthToken()
+
+  const makeRequest = (authToken: string | null) => {
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string>),
+    }
+
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`
+    }
+
+    return fetch(url, { ...options, headers })
+  }
+
+  let response = await makeRequest(token)
+
+  if (response.status === 401 && typeof window !== "undefined") {
+    const refreshToken = getRefreshToken()
+
+    if (refreshToken) {
+      try {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        })
+
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json()
+          setAuthTokens(data.access_token, data.refresh_token)
+          response = await makeRequest(data.access_token)
+        } else {
+          removeAuthToken()
+          window.location.href = "/login"
+        }
+      } catch {
+        removeAuthToken()
+        window.location.href = "/login"
+      }
+    } else {
+      removeAuthToken()
+      window.location.href = "/login"
+    }
+  }
+
+  return response
 }

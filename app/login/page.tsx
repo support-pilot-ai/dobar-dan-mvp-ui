@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginUser } from "@/lib/api"
-import { setAuthToken } from "@/lib/auth"
+import { setAuthTokens } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,7 +28,7 @@ export default function LoginPage() {
     try {
       const formData = { email, password }
       const response = await loginUser(formData)
-      setAuthToken(response.access_token)
+      setAuthTokens(response.access_token, response.refresh_token || "")
       router.push("/chat")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
@@ -41,8 +41,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-balance">Dobar Dan!</CardTitle>
-          <CardDescription>Prijavi se na svoj račun</CardDescription>
+          <CardTitle className="text-2xl font-bold text-balance">Dobrodošli nazad</CardTitle>
+          <CardDescription>Unesite svoje podatke za pristup nalogu</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -56,7 +56,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="tvoj@email.com"
+                placeholder="vas@primjer.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -64,11 +64,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Šifra</Label>
+              <Label htmlFor="password">Lozinka</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Unesi šifru"
+                placeholder="Unesite vašu lozinku"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -81,9 +81,9 @@ export default function LoginPage() {
               {isLoading ? "Prijavljivanje..." : "Prijavi se"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              {"Novi si ovdje? "}
+              {"Nemate nalog? "}
               <Link href="/register" className="text-primary hover:underline">
-                Kreiraj račun
+                Registruj se
               </Link>
             </p>
           </CardFooter>
