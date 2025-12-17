@@ -128,13 +128,13 @@ export async function loginUser(data: UserLogin): Promise<AuthResponse> {
 }
 
 // Chat APIs
-export async function sendMessage(token: string, message: string): Promise<ChatMessageResponse> {
+export async function sendMessage(token: string, message: string, useWebSearch = false): Promise<ChatMessageResponse> {
   const response = await fetchWithAuth(`${API_BASE_URL}/api/chat/message`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ content: message }),
+    body: JSON.stringify({ message: message, useWebSearch }),
   })
 
   if (!response.ok) {

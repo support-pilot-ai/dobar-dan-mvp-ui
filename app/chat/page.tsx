@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Send, ThumbsDown, ThumbsUp, MessageSquare, Upload } from "lucide-react"
+import { Send, ThumbsDown, ThumbsUp, MessageSquare, Upload, Globe } from "lucide-react"
 import { isAuthenticated, getAuthToken, removeAuthToken } from "@/lib/auth"
 import { sendMessage, sendFeedback, getChatHistory, getUserProfile } from "@/lib/api"
 import { ChatSidebar } from "@/components/chat-sidebar"
@@ -53,6 +53,7 @@ export default function ChatPage() {
     type: null,
   })
   const [feedbackText, setFeedbackText] = useState("")
+  const [useWebSearch, setUseWebSearch] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -187,8 +188,8 @@ export default function ChatPage() {
         return
       }
 
-      const response = await sendMessage(token, userMessage.content)
-
+      const response = await sendMessage(token, userMessage.content, useWebSearch)
+      
       const assistantMessage: Message = {
         id: response.id,
         role: "assistant",
@@ -573,10 +574,20 @@ export default function ChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={inputPlaceholder}
-                className="min-h-[52px] max-h-[200px] resize-none pr-12"
+                className="min-h-[52px] max-h-[200px] resize-none pr-20"
                 rows={1}
                 disabled={isLoading || !hasDocuments}
               />
+              <Button
+                type="button"
+                size="icon"
+                variant={useWebSearch ? "default" : "ghost"}
+                onClick={() => setUseWebSearch(!useWebSearch)}
+                className="absolute bottom-2 right-12 h-8 w-8"
+                title={useWebSearch ? "Web pretraga uključena" : "Web pretraga isključena"}
+              >
+                <Globe className="h-4 w-4" />
+              </Button>
               <Button
                 type="submit"
                 size="icon"
