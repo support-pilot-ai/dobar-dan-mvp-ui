@@ -15,6 +15,7 @@ import { sendMessage, sendFeedback, getChatHistory, getUserProfile } from "@/lib
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
+import ReactMarkdown from "react-markdown"
 
 interface Message {
   id: string
@@ -189,7 +190,7 @@ export default function ChatPage() {
       }
 
       const response = await sendMessage(token, userMessage.content, useWebSearch)
-      
+
       const assistantMessage: Message = {
         id: response.id,
         role: "assistant",
@@ -484,7 +485,41 @@ export default function ChatPage() {
                                 : "bg-muted text-foreground",
                             )}
                           >
-                            <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                            {message.role === "assistant" ? (
+                                              <ReactMarkdown
+                                                components={{
+                                                  a: ({ href, children }) => (
+                                                    <a
+                                                      href={href}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-blue-600 hover:text-blue-800 underline"
+                                                    >
+                                                      {children}
+                                                    </a>
+                                                  ),
+                                                  p: ({ children }) => (
+                                                    <p className="whitespace-pre-wrap leading-relaxed mb-2 last:mb-0">
+                                                      {children}
+                                                    </p>
+                                                  ),
+                                                  ul: ({ children }) => (
+                                                    <ul className="list-disc list-inside space-y-1 mb-2">{children}</ul>
+                                                  ),
+                                                  ol: ({ children }) => (
+                                                    <ol className="list-decimal list-inside space-y-1 mb-2">{children}</ol>
+                                                  ),
+                                                  strong: ({ children }) => (
+                                                    <strong className="font-semibold">{children}</strong>
+                                                  ),
+                                                  hr: () => <hr className="my-3 border-border" />,
+                                                }}
+                                              >
+                                                {message.content}
+                                              </ReactMarkdown>
+                                            ) : (
+                                              <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                                            )}
                           </div>
                           {message.role === "assistant" && (
                             <div className="flex items-center justify-between px-2">
