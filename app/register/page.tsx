@@ -116,10 +116,22 @@ export default function RegisterPage() {
                   type="tel"
                   placeholder="61 234 567"
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ""))}
+                  onChange={(e) => {
+                    let value = e.target.value.replace(/[^0-9]/g, "")
+                    if (value.length > 9) value = value.slice(0, 9)
+                    
+                    if (value.length <= 2) {
+                      setPhoneNumber(value)
+                    } else if (value.length <= 5) {
+                      setPhoneNumber(`${value.slice(0, 2)} ${value.slice(2)}`)
+                    } else {
+                      setPhoneNumber(`${value.slice(0, 2)} ${value.slice(2, 5)} ${value.slice(5)}`)
+                    }
+                  }}
                   required
                   disabled={isLoading}
                   className="rounded-l-none"
+                  maxLength={11}
                 />
               </div>
             </div>
