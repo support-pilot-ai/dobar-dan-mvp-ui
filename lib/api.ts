@@ -5,6 +5,7 @@ export interface UserRegister {
   email: string
   password: string
   name: string
+  phone_number?: string
 }
 
 export interface UserLogin {

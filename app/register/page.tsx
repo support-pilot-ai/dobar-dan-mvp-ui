@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -30,7 +31,7 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const formData = { email, password, name: fullName }
+      const formData = { email, password, name: fullName, phone_number: `387${phoneNumber}` }
       await registerUser(formData)
       setIsSuccess(true)
       toast({
@@ -103,6 +104,24 @@ export default function RegisterPage() {
                 required
                 disabled={isLoading}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Broj telefona</Label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                  +387
+                </span>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="61 234 567"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ""))}
+                  required
+                  disabled={isLoading}
+                  className="rounded-l-none"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
