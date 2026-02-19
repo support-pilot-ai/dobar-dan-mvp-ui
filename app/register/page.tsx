@@ -31,7 +31,8 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const formData = { email, password, name: fullName, phone_number: `387${phoneNumber}` }
+      const cleanPhone = phoneNumber.replace(/\s/g, "")
+      const formData = { email, password, name: fullName, phone_number: `387${cleanPhone}` }
       await registerUser(formData)
       setIsSuccess(true)
       toast({
